@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Kirish{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <form class="panel auth-form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
+    <h1 data-i18n="login.title">Kirish</h1>
+    <label><span data-i18n="login.email">Email</span>
+      <input type="email" name="email" required />
+    </label>
+    <label><span data-i18n="login.password">Parol</span>
+      <input type="password" name="password" required />
+    </label>
+    <p><a href="{{ url_for('forgot_password') }}">Parolni unutdingizmi?</a></p>
+    <button class="btn btn-primary" type="submit" data-i18n="login.submit">Kirish</button>
+    <p><span data-i18n="login.newUser">Yangi foydalanuvchimisiz?</span> <a href="{{ url_for('register') }}" data-i18n="login.registerLink">Ro'yxatdan o'ting</a>.</p>
+  </form>
+</div>
+{% endblock %}

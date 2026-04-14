@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="{{ ui_lang or 'uz' }}" dir="{{ ui_dir or 'ltr' }}" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Safar24{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/tailwind/tailwind.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/flatpickr/flatpickr.min.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive-fixes.css') }}" />
+  </head>
+  <body class="is-loading" data-page-endpoint="{{ request.endpoint or '' }}">
+    <svg class="liquid-optics-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="liquid-double-refraction-v32" x="-24%" y="-24%" width="148%" height="148%" color-interpolation-filters="sRGB">
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.012 0.028"
+            numOctaves="2"
+            seed="9"
+            result="liquidNoise"
+          />
+          <feDisplacementMap
+            id="liquid-double-refraction-map-v32"
+            in="SourceGraphic"
+            in2="liquidNoise"
+            xChannelSelector="R"
+            yChannelSelector="G"
+            scale="2"
+            result="liquidDisplaced"
+          />
+          <feGaussianBlur in="liquidDisplaced" stdDeviation="0.08" />
+        </filter>
+      </defs>
+    </svg>
+
+    <div class="page-loader" data-page-loader role="status" aria-live="polite" aria-label="Sahifa yuklanmoqda" data-i18n-aria-label="loader.aria">
+      <div class="page-loader-scene">
+        <div class="loader-globe" aria-hidden="true">
+          <div class="loader-orbit" aria-hidden="true">
+            <span class="loader-plane"></span>
+          </div>
+        </div>
+        <p class="page-loader-text" data-i18n="loader.text">Safar24 yuklanmoqda...</p>
+      </div>
+    </div>
+
+    <div class="bg-glow glow-1" aria-hidden="true"></div>
+    <div class="bg-glow glow-2" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <a class="brand" href="{{ url_for('index') }}">
+          <img
+            class="brand-logo"
+            src="{{ url_for('static', filename='mainlogo.PNG') }}"
+            data-dark-logo="{{ url_for('static', filename='mainlogo.PNG') }}"
+            data-light-logo="{{ url_for('static', filename='mainlogo.PNG') }}"
+            alt="Safar24 logo"
+            loading="eager"
+          />
+        </a>
+
+        <nav class="nav" id="mainNav">
+          <a href="{{ url_for('index') }}" data-i18n="nav.home">Bosh sahifa</a>
+          <a href="{{ url_for('search') }}" data-i18n="nav.search">Qidiruv</a>
+          {% if session.get('impersonator_id') %}
+          <a class="btn btn-nav" href="{{ url_for('super_admin_return') }}" data-i18n="nav.superBack">Superga qaytish</a>
+          {% endif %}
+          {% if session.get('user_id') and not session.get('is_admin') %}
+          <a href="{{ url_for('dashboard') }}" data-i18n="nav.dashboard">Kabinet</a>
+          {% endif %}
+          {% if session.get('user_id') %}
+          <a href="{{ url_for('profile') }}" data-i18n="nav.profile">Profil</a>
+          {% endif %}
+          {% if session.get('is_admin') %}
+          <a href="{{ url_for('admin_dashboard') }}" data-i18n="nav.adminPanel">Admin panel</a>
+          {% if session.get('is_super_admin') %}
+          <a href="{{ url_for('super_admin_panel') }}" data-i18n="nav.superPanel">Super panel</a>
+          {% endif %}
+          <a href="{{ url_for('admin_logout') }}" data-i18n="nav.logout">Chiqish</a>
+          {% elif session.get('user_id') %}
+          <a href="{{ url_for('logout') }}" data-i18n="nav.logout">Chiqish</a>
+          {% else %}
+          <a href="{{ url_for('login') }}" data-i18n="nav.login">Kirish</a>
+          <a class="btn btn-nav" href="{{ url_for('register') }}" data-i18n="nav.register">Ro'yxatdan o'tish</a>
+          {% endif %}
+        </nav>
+
+        <div class="liquid-control-pair" data-liquid-control-pair>
+          <div class="liquid-control-fallback" data-liquid-fallback>
+            <div class="btn btn-nav language-toggle" role="group" aria-label="Tilni tanlash" data-i18n-aria-label="language.aria">
+              <button class="lang-pill" type="button" data-lang-option="uz" data-lang-code="UZ">UZ</button>
+              <button class="lang-pill" type="button" data-lang-option="ru" data-lang-code="RU">RU</button>
+              <button class="lang-pill" type="button" data-lang-option="en" data-lang-code="EN">EN</button>
+            </div>
+
+            <button class="btn btn-nav theme-toggle" type="button" data-theme-toggle aria-label="Tungi rejimni almashtirish" data-i18n-aria-label="theme.dark">☾</button>
+          </div>
+          <div data-liquid-react-root></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+              <div class="flash-wrap">
+                {% for category, message in messages %}
+                  <div class="flash flash-{{ category }}" data-i18n-flash="true">{{ message }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+
+          {% block content %}{% endblock %}
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-wrap">
+        <p><span data-i18n="footer.copyrightPrefix">©</span> <span id="year"></span> Safar24</p>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='vendor/i18next/i18next.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/flatpickr/flatpickr.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/react/react.production.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/react/react-dom.production.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/framer-motion/framer-motion.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/liquid_nav_react.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/nav_glass_react.js') }}"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

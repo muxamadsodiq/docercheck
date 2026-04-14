@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Super Panel{% endblock %}
+
+{% block content %}
+<section class="ticket-shell ticket-shell-spotlight glass-card admin-shell super-admin-shell">
+  <div class="row-between">
+    <div>
+      <p class="eyebrow">SUPER ADMIN</p>
+      <h1>Super boshqaruv paneli</h1>
+      <p class="lead">Barcha akkauntlar, role va parollarni boshqarish markazi.</p>
+    </div>
+    <div class="row-inline">
+      <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Admin markaz</a>
+      <a href="{{ url_for('admin_analytics') }}" class="btn btn-primary">Analitika</a>
+    </div>
+  </div>
+
+  <div class="cards metrics mt-3">
+    <article class="card glass-card"><h3>Jami akkaunt</h3><p class="metric">{{ stats.total_accounts }}</p></article>
+    <article class="card glass-card"><h3>Adminlar</h3><p class="metric">{{ stats.total_admins }}</p></article>
+    <article class="card glass-card"><h3>Super adminlar</h3><p class="metric">{{ stats.total_super_admins }}</p></article>
+  </div>
+</section>
+
+<section class="sub-block">
+  <article class="panel glass-card">
+    <h2>Account qidiruv</h2>
+    <form class="row-inline mt-3 super-admin-search-form" method="get" action="{{ url_for('super_admin_panel') }}">
+      <input type="text" name="q" value="{{ q or '' }}" placeholder="Ism, email, phone, account ID" />
+      <button class="btn btn-secondary" type="submit">Qidirish</button>
+      <a class="btn btn-nav" href="{{ url_for('super_admin_panel') }}">Tozalash</a>
+    </form>
+    <p class="theme-note mt-3">Mavjud eski parol matni tiklanmaydi (tizim hash saqlaydi). Parol maydonini bo'sh qoldirsangiz tizim vaqtinchalik yangi parol yaratadi.</p>
+  </article>
+</section>
+
+<section class="sub-block">
+  <div class="table-wrap super-admin-table-wrap">
+    <table class="super-admin-users-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>F.I.Sh</th>
+          <th>Login</th>
+          <th>Role</th>
+          <th>Parol (hash)</th>
+          <th>Tayinlagan</th>
+          <th>Stat</th>
+          <th>Boshqaruv</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>#{{ u.id }}</td>
+          <td>
+            {{ u.full_name }}
+            {% if u.id == current_super_id %}<br/><small>(Joriy akkaunt)</small>{% endif %}
+          </td>
+          <td>
+            <strong>{{ u.email }}</strong><br/>
+            <small>{{ u.account_id }}</small><br/>
+            <small>{{ u.phone or '-' }}</small>
+          </td>
+          <td>
+            {% if u.is_super_admin %}
+              SUPER_ADMIN
+            {% elif u.is_admin %}
+              ADMIN
+            {% else %}
+              USER
+            {% endif %}
+          </td>
+          <td>
+            <details>
+              <summary>Hashni ko'rish</summary>
+              <div style="max-width: 420px; word-break: break-all; margin-top: 8px;">{{ u.password_hash }}</div>
+            </details>
+          </td>
+          <td class="super-admin-granter-cell">
+            {% if u.role_granted_by %}
+              <small>{{ u.role_granter_name or ('ID #' ~ u.role_granted_by) }}</small><br/>
+              <small>{{ u.role_granter_email or '-' }}</small><br/>
+              <small>{{ u.role_granted_at or '-' }}</small>
+            {% else %}
+              <small>Tizim / default</small>
+            {% endif %}
+          </td>
+          <td>
+            <small>Bronlar: {{ u.bookings_total }}</small><br/>
+            <small>Yaratilgan: {{ u.created_at }}</small>
+          </td>
+          <td>
+            <form class="row-inline super-admin-role-form" method="post" action="{{ url_for('super_admin_update_role', user_id=u.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="q" value="{{ q or '' }}" />
+              <select name="role" required {% if current_role_granted_by and u.id == current_role_granted_by %}disabled{% endif %}>
+                <option value="user" {% if not u.is_admin and not u.is_super_admin %}selected{% endif %}>USER</option>
+                <option value="admin" {% if u.is_admin and not u.is_super_admin %}selected{% endif %}>ADMIN</option>
+                <option value="super_admin" {% if u.is_super_admin %}selected{% endif %}>SUPER_ADMIN</option>
+              </select>
+              <button class="btn btn-small btn-secondary" type="submit" {% if current_role_granted_by and u.id == current_role_granted_by %}disabled{% endif %}>Role saqlash</button>
+            </form>
+            {% if current_role_granted_by and u.id == current_role_granted_by %}
+              <small class="theme-note d-block mt-2">Bu akkaunt sizga role bergan. Lavozimi lock holatda.</small>
+            {% endif %}
+
+            <form class="row-inline mt-2 super-admin-password-form" method="post" action="{{ url_for('super_admin_update_password', user_id=u.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="q" value="{{ q or '' }}" />
+              <input type="text" name="new_password" placeholder="Yangi parol (bo'sh = auto)" />
+              <button class="btn btn-small btn-primary" type="submit">Parol yangilash</button>
+            </form>
+
+            <form class="mt-2" method="post" action="{{ url_for('super_admin_impersonate', user_id=u.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="q" value="{{ q or '' }}" />
+              <button class="btn btn-small btn-nav" type="submit">Akkauntga kirish</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">Natija topilmadi.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="sub-block">
+  <article class="panel glass-card">
+    <div class="row-between">
+      <div>
+        <h2>Database Explorer</h2>
+        <p class="theme-note">Jadvalni tanlang, filtrlang, JSON/CSV/XLSX eksport qiling va tanlangan yozuvlarni o'chiring.</p>
+      </div>
+      <form class="row-inline" method="get" action="{{ url_for('super_admin_panel') }}">
+        <input type="hidden" name="q" value="{{ q or '' }}" />
+        <select name="db_table" required>
+          {% for t in db_tables %}
+          <option value="{{ t.name }}" {% if t.name == db_table %}selected{% endif %}>{{ t.name }} ({{ t.rows }})</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="db_q" value="{{ db_q or '' }}" placeholder="Filtr (ixtiyoriy)" />
+        <input type="hidden" name="db_page" value="1" />
+        <button class="btn btn-secondary" type="submit">Ko'rish</button>
+      </form>
+    </div>
+
+    {% if db_preview.error %}
+      <div class="flash flash-danger mt-3">{{ db_preview.error }}</div>
+    {% endif %}
+
+    {% if db_table %}
+    <form method="post" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="q" value="{{ q or '' }}" />
+      <input type="hidden" name="table" value="{{ db_table }}" />
+      <input type="hidden" name="db_q" value="{{ db_q or '' }}" />
+      <input type="hidden" name="db_page" value="{{ db_page }}" />
+
+      <div class="row-between mb-2">
+        <div>
+          <strong>{{ db_table }}</strong>
+          <small class="theme-note">Jami: {{ db_preview.total_rows }} | Sahifa: {{ db_preview.page }}/{{ db_preview.total_pages }}</small>
+        </div>
+        <div class="row-inline">
+          <select name="format" aria-label="Eksport formati">
+            {% for fmt in db_export_formats %}
+            <option value="{{ fmt }}">{{ fmt|upper }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-primary" type="submit" formaction="{{ url_for('super_admin_export_table') }}">Saqlash (Export)</button>
+          <button class="btn btn-nav" type="submit" formaction="{{ url_for('super_admin_delete_table_rows') }}" onclick="return confirm('Tanlangan yozuvlar o\'chirilsinmi?')">Tanlanganni o'chirish</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanlash</th>
+              {% for col in db_preview.columns %}
+              <th>{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in db_preview.rows %}
+            <tr>
+              <td>
+                {% if row.get('__record_key') is not none %}
+                <input type="checkbox" name="record_keys" value="{{ row.get('__record_key') }}" />
+                {% else %}
+                -
+                {% endif %}
+              </td>
+              {% for col in db_preview.columns %}
+              {% set cell = row.get(col) %}
+              <td>
+                <span title="{{ cell }}">{{ (cell|string)[:140] }}{% if (cell|string)|length > 140 %}...{% endif %}</span>
+              </td>
+              {% endfor %}
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="{{ (db_preview.columns|length) + 1 }}">Yozuv topilmadi.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+
+    {% if db_preview.total_pages > 1 %}
+    <div class="row-inline mt-3">
+      {% if db_preview.page > 1 %}
+      <a class="btn btn-small btn-secondary" href="{{ url_for('super_admin_panel', q=q, db_table=db_table, db_q=db_q, db_page=db_preview.page-1) }}">Oldingi</a>
+      {% endif %}
+      {% if db_preview.page < db_preview.total_pages %}
+      <a class="btn btn-small btn-secondary" href="{{ url_for('super_admin_panel', q=q, db_table=db_table, db_q=db_q, db_page=db_preview.page+1) }}">Keyingi</a>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
+  </article>
+</section>
+{% endblock %}

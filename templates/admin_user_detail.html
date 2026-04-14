@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | {{ user.full_name }}{% endblock %}
+
+{% block content %}
+<section class="ticket-shell ticket-shell-spotlight glass-card admin-shell">
+  <div class="row-between">
+    <div>
+      <p class="eyebrow">USER PROFILE</p>
+      <h1>{{ user.full_name }}</h1>
+      <p class="lead">{{ user.account_id }} | {{ user.email }}</p>
+    </div>
+    <div class="row-inline">
+      <a class="btn btn-secondary" href="{{ url_for('admin_users_page') }}">Userlar ro'yxati</a>
+      <a class="btn btn-primary" href="{{ url_for('admin_accounts_page') }}">Balans markazi</a>
+    </div>
+  </div>
+</section>
+
+{% if balance_receipt %}
+<section class="sub-block" id="receipt-{{ balance_receipt.id }}">
+  <article class="panel glass-card receipt-card">
+    <p class="eyebrow">BALANCE RECEIPT</p>
+    <h2>Balans yangilandi</h2>
+    <p class="lead">{{ balance_receipt.full_name }} uchun operatsiya wallet tarixiga yozildi.</p>
+    <div class="detail-grid mt-3">
+      <div><strong>Chek #</strong><br />{{ balance_receipt.id }}</div>
+      <div><strong>Account</strong><br />{{ balance_receipt.account_id }}</div>
+      <div><strong>Miqdor</strong><br />
+        {% if (balance_receipt.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(balance_receipt.amount_value or 0) }} USD
+        {% else %}
+          {{ '{:,.0f}'.format(balance_receipt.amount_value or balance_receipt.amount_uzs or 0) }} UZS
+        {% endif %}
+      </div>
+      <div><strong>Vaqt</strong><br />{{ balance_receipt.reviewed_at or balance_receipt.created_at }}</div>
+    </div>
+    <p class="mt-3"><strong>Admin izohi:</strong> {{ balance_receipt.admin_note or balance_receipt.note or 'Izoh kiritilmagan' }}</p>
+  </article>
+</section>
+{% endif %}
+
+<section class="sub-block">
+  <div class="cards two-col-admin">
+    <article class="card glass-card">
+      <h2>Profil ma'lumotlari</h2>
+      <div class="detail-grid mt-3">
+        <div><strong>Email</strong><br />{{ user.email }}</div>
+        <div><strong>Telefon</strong><br />{{ user.phone or '-' }}</div>
+        <div><strong>Passport</strong><br />{{ user.passport_series or '' }}{{ user.passport_number or '-' }}</div>
+        <div><strong>Tug'ilgan sana</strong><br />{{ user.birth_date or '-' }}</div>
+        <div><strong>Millat</strong><br />{{ user.nationality or '-' }}</div>
+        <div><strong>Gender</strong><br />{{ user.gender or '-' }}</div>
+        <div><strong>Notif email</strong><br />{{ user.notification_email or '-' }}</div>
+        <div><strong>Ro'yxatdan o'tgan</strong><br />{{ user.created_at }}</div>
+      </div>
+      <div class="badge-row mt-3">
+        <span class="badge">UZS: {{ '{:,.0f}'.format(user.balance_uzs or 0) }}</span>
+        <span class="badge">USD: {{ '%.2f'|format(user.balance_usd or 0) }}</span>
+        <span class="badge">Bron: {{ user.bookings_total }}</span>
+        <span class="badge">Ticket: {{ user.ticketed_total }}</span>
+        <span class="badge">Wallet: {{ user.wallet_requests_total }}</span>
+      </div>
+    </article>
+
+    <article class="card glass-card">
+      <h2>Tezkor boshqaruv</h2>
+      <form class="form-grid mt-3" method="post" action="{{ url_for('admin_add_balance') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="next_page" value="accounts" />
+        <input type="hidden" name="user_id" value="{{ user.id }}" />
+        <input type="hidden" name="account_id" value="{{ user.account_id }}" />
+        <div class="detail-grid">
+          <label>Valyuta
+            <select name="currency" required>
+              <option value="UZS">UZS</option>
+              <option value="USD">USD</option>
+            </select>
+          </label>
+          <label>Summa
+            <input type="number" name="amount" min="0.01" step="0.01" required />
+          </label>
+          <label style="grid-column: 1 / -1;">Izoh
+            <input type="text" name="admin_note" placeholder="Masalan: manual topup, correction" />
+          </label>
+        </div>
+        <div class="row-inline mt-3">
+          <button class="btn btn-primary" type="submit" name="operation" value="add">Pul qo'shish</button>
+          <button class="btn btn-danger" type="submit" name="operation" value="subtract">Pul ayirish</button>
+        </div>
+      </form>
+
+      <form class="form-grid mt-4" method="post" action="{{ url_for('admin_update_user_password', user_id=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <label>Yangi parol
+          <input type="password" name="new_password" minlength="8" placeholder="Kamida 8 belgi" required />
+        </label>
+        <button class="btn btn-secondary" type="submit">Parolni almashtirish</button>
+      </form>
+    </article>
+  </div>
+</section>
+
+<section class="sub-block">
+  <div class="cards two-col-admin">
+    <article class="card glass-card">
+      <h2>Oxirgi bronlar</h2>
+      <div class="cards one-col mt-3">
+        {% for booking in recent_bookings %}
+        <article class="card">
+          <h3>Booking #{{ booking.id }} {% if booking.ticket_no %}| {{ booking.ticket_no }}{% endif %}</h3>
+          <p><strong>Yo'nalish:</strong> {{ booking.from_city }}{% if booking.from_airport_code %} ({{ booking.from_airport_code }}){% endif %} → {{ booking.to_city }}{% if booking.to_airport_code %} ({{ booking.to_airport_code }}){% endif %}</p>
+          <p><strong>Reys:</strong> {{ booking.route_code or '-' }} | <strong>Sana:</strong> {{ booking.departure_date }} {{ booking.departure_time or '' }}</p>
+          <p><strong>Status:</strong> {{ booking.status }} | <strong>Aviakompaniya:</strong> {{ booking.airline }}</p>
+        </article>
+        {% else %}
+        <article class="card"><p>Bronlar hali yo'q.</p></article>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="card glass-card">
+      <h2>Oxirgi to'lovlar</h2>
+      <div class="cards one-col mt-3">
+        {% for payment in recent_payments %}
+        <article class="card">
+          <h3>To'lov #{{ payment.id }} | Booking #{{ payment.booking_id }}</h3>
+          <p><strong>Status:</strong> {{ payment.status }}</p>
+          <p><strong>Usul:</strong> {{ (payment.payment_method or '-')|upper }} | <strong>Reference:</strong> {{ payment.payment_reference or '-' }}</p>
+          <p><strong>Miqdor:</strong>
+            {% if (payment.currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(payment.amount_value or 0) }} USD
+            {% else %}
+              {{ '{:,.0f}'.format(payment.amount_value or payment.amount_uzs or 0) }} UZS
+            {% endif %}
+          </p>
+        </article>
+        {% else %}
+        <article class="card"><p>To'lovlar hali yo'q.</p></article>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="sub-block">
+  <article class="card glass-card">
+    <h2>Wallet va balans tarixi</h2>
+    <div class="cards one-col mt-3">
+      {% for wallet in recent_wallet_requests %}
+      <article class="card">
+        <h3>Harakat #{{ wallet.id }} | {{ (wallet.status or 'pending')|upper }}</h3>
+        <p><strong>Usul:</strong> {{ (wallet.payment_method or '-')|upper }}</p>
+        <p><strong>Miqdor:</strong>
+          {% if (wallet.currency or 'UZS') == 'USD' %}
+            {{ '%.2f'|format(wallet.amount_value or 0) }} USD
+          {% else %}
+            {{ '{:,.0f}'.format(wallet.amount_value or wallet.amount_uzs or 0) }} UZS
+          {% endif %}
+        </p>
+        <p><strong>Note:</strong> {{ wallet.note or '-' }}</p>
+        <p><strong>Admin note:</strong> {{ wallet.admin_note or '-' }}</p>
+        <p><strong>Vaqt:</strong> {{ wallet.reviewed_at or wallet.created_at }}</p>
+      </article>
+      {% else %}
+      <article class="card"><p>Wallet harakatlari hali yo'q.</p></article>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

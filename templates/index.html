@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Bosh sahifa{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <div class="ticket-shell ticket-shell-spotlight">
+    <p class="eyebrow" data-i18n="home.eyebrow">YANGI AVLOD SAYOHAT XIZMATI</p>
+    <h1 data-i18n="home.title">Safaringizni ishonchli boshqaring</h1>
+    <p class="lead" data-i18n="home.lead">
+      Safar24 sayti foydalanuvchiga qulay, tushunarli va tartibli aviachipta xizmati berish uchun yaratilgan. Bizning maqsad sayohatni qidiruvdan boshlab bron, aloqa va qo'llab-quvvatlashgacha bir joyda soddalashtirishdir.
+    </p>
+    <div class="summary-grid compact mt-4">
+      <article class="summary-card">
+        <span class="summary-label" data-i18n="home.statGoalLabel">Maqsad</span>
+        <strong data-i18n="home.statGoalValue">Qulay bron jarayoni</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label" data-i18n="home.statServiceLabel">Xizmat</span>
+        <strong data-i18n="home.statServiceValue">Tezkor yordam va aloqa</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label" data-i18n="home.statPlatformLabel">Platforma</span>
+        <strong data-i18n="home.statPlatformValue">Sodda va ishonchli sayt</strong>
+      </article>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="{{ url_for('search') }}" data-i18n="home.searchTicket">Bilet qidirish</a>
+      {% if not session.get('user_id') %}
+      <a class="btn btn-secondary" href="{{ url_for('register') }}" data-i18n="home.openAccount">Hisob ochish</a>
+      {% endif %}
+      <a class="btn btn-secondary" href="{{ url_for('search') }}" data-i18n="home.viewRoutes">Yo'nalishlarni ko'rish</a>
+    </div>
+  </div>
+
+  <article class="panel glass-card">
+    <h3 data-i18n="home.cardTitle">Safar24</h3>
+    <p class="theme-note" data-i18n="home.cardLead">Soddalik, aniqlik va tezkor bron tajribasi uchun optimallashtirilgan premium aviachipta interfeysi.</p>
+    <div class="hero-actions mt-3">
+      <a class="btn btn-primary" href="{{ url_for('search') }}" data-i18n="home.startSearch">Qidiruvni boshlash</a>
+    </div>
+  </article>
+</div>
+
+<section class="sub-block">
+  <h2 data-i18n="home.whatWeDoTitle">Biz nima qilamiz?</h2>
+  <div class="cards">
+    <article class="card">
+      <h3 data-i18n="home.featureSearchTitle">Aqlli qidiruv</h3>
+      <p data-i18n="home.featureSearchBody">Yo'nalish, sana va narx bo'yicha eng mos aviachipta variantlarini topib beramiz.</p>
+    </article>
+    <article class="card">
+      <h3 data-i18n="home.featureBookingTitle">Bron + tekshiruv</h3>
+      <p data-i18n="home.featureBookingBody">Bron tugmasidan keyin foydalanuvchi kabineti, pasport ma'lumotlari va to'lov oqimi ishlaydi.</p>
+    </article>
+    <article class="card">
+      <h3 data-i18n="home.featureSupportTitle">Mijozga e'tibor</h3>
+      <p data-i18n="home.featureSupportBody">Har bir jarayon tushunarli ko'rinishda beriladi, aloqa kanallari ochiq bo'ladi va bilet ma'lumotlari tartibli yetkaziladi.</p>
+    </article>
+  </div>
+</section>
+
+<section class="sub-block">
+  <h2 data-i18n="home.activeFlightsTitle">Aktiv reyslar</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-i18n="home.tableFlightNo">Reys #</th>
+          <th data-i18n="home.tableRoute">Yo'nalish</th>
+          <th data-i18n="home.tableAirport">Aeroport</th>
+          <th data-i18n="home.tableDateTime">Sana/Vaqt</th>
+          <th data-i18n="home.tableClass">Klass</th>
+          <th data-i18n="home.tableAirline">Aviakompaniya</th>
+          <th data-i18n="home.tablePrice">Narx</th>
+          <th data-i18n="home.tableSeats">Joy</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in flights %}
+        <tr>
+          <td>{{ f.route_code or '-' }}</td>
+          <td>{{ f.from_city }} → {{ f.to_city }}</td>
+          <td>{{ f.from_airport_code or '-' }} → {{ f.to_airport_code or '-' }}</td>
+          <td>{{ f.departure_date }} {{ f.departure_time or '' }}</td>
+          <td>{{ f.travel_class or 'Economy' }}</td>
+          <td>{{ f.airline }}</td>
+          <td>
+            {% if (f.price_currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(f.price_value or 0) }} USD
+            {% else %}
+              {{ '{:,.0f}'.format(f.price_value or f.price_uzs) }} UZS
+            {% endif %}
+          </td>
+          <td>{{ f.seats }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" data-i18n="home.noFlights">Hozircha reyslar mavjud emas.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

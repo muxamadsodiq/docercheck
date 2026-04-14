@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Analitika{% endblock %}
+
+{% block content %}
+<p class="eyebrow">ADMIN INSIGHTS</p>
+<h1>📊 Analitika</h1>
+<p class="lead">Daromad, bronlar, yo'lovchilar va top reyslar bo'yicha qisqacha boshqaruv ko'rinishi.</p>
+
+<div class="cards metrics">
+  <article class="card">
+    <h3>Jami kirim</h3>
+    <p class="metric">{{ '{:,.0f}'.format(analytics['total_revenue']) }}</p>
+    <p class="theme-note">Tasdiqlangan to'lovlar</p>
+  </article>
+  <article class="card">
+    <h3>Jami bronlar</h3>
+    <p class="metric">{{ analytics['total_bookings'] }}</p>
+    <p class="theme-note">Faol bronlar</p>
+  </article>
+  <article class="card">
+    <h3>Jami yo'lovchilar</h3>
+    <p class="metric">{{ analytics['total_passengers'] }}</p>
+    <p class="theme-note">Ro'yxatga olingan</p>
+  </article>
+  <article class="card">
+    <h3>Bekor qilish foizi</h3>
+    <p class="metric">{{ analytics['cancellation_rate'] }}%</p>
+    <p class="theme-note">{{ analytics['cancelled_bookings'] }} ta bron</p>
+  </article>
+</div>
+
+<div class="hero-grid" style="margin-top: 26px;">
+  <article class="panel">
+    <h3>Foydalanuvchilar</h3>
+    <p class="metric">{{ analytics['total_users'] }}</p>
+    <p class="theme-note">Ro'yxatdan o'tgan foydalanuvchilar</p>
+  </article>
+
+  <article class="panel">
+    <h3>Qisqacha statistika</h3>
+    <p class="theme-note"><strong>O'rtacha bron:</strong> {% if analytics['total_bookings'] > 0 %}{{ '{:,.0f}'.format(analytics['total_revenue'] / analytics['total_bookings']) }}{% else %}0{% endif %} so'm</p>
+    <p class="theme-note"><strong>O'rtacha yo'lovchi:</strong> {% if analytics['total_bookings'] > 0 %}{{ (analytics['total_passengers'] / analytics['total_bookings'])|round(1) }}{% else %}0{% endif %}</p>
+    <p class="theme-note"><strong>Faollik:</strong> {% if analytics['total_users'] > 0 %}{{ '{:,.1f}'.format(100 * analytics['total_bookings'] / analytics['total_users']) }}%{% else %}0%{% endif %}</p>
+  </article>
+</div>
+
+<section class="sub-block">
+  <h2>📈 So'nggi 30 kunlik daromad</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Sana</th>
+          <th class="text-end">Daromad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for day in analytics['daily_revenue'] %}
+        <tr>
+          <td>{{ day['day'] }}</td>
+          <td class="text-end">{{ '{:,.0f}'.format(day['revenue'] or 0) }} so'm</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="2">Ma'lumot yo'q</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="sub-block">
+  <h2>🏆 Eng ko'p bron qilingan reyslar</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Reys</th>
+          <th>Yo'nalish</th>
+          <th class="text-center">Bronlar</th>
+          <th class="text-end">Daromad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for flight in analytics['top_flights'] %}
+        <tr>
+          <td><strong>{{ flight['route_code'] }}</strong></td>
+          <td>{{ flight['from_city'] }} → {{ flight['to_city'] }}</td>
+          <td class="text-center"><span class="badge">{{ flight['bookings'] }}</span></td>
+          <td class="text-end"><strong>{{ '{:,.0f}'.format(flight['revenue'] or 0) }} so'm</strong></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">Ma'lumot yo'q</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="row-inline" style="margin-top: 24px;">
+  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Bosh sahifa</a>
+  <button class="btn btn-primary" type="button" data-print-trigger>🖨️ Chopi qilish</button>
+</div>
+{% endblock %}

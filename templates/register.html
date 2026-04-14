@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Ro'yxatdan o'tish{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <section class="ticket-shell mb-4">
+    <p class="eyebrow" data-i18n="register.newAccount">YANGI HISOB</p>
+    <h1 data-i18n="register.title">Hisob ochish</h1>
+    <p class="lead" data-i18n="register.lead">Ro'yxatdan o'tishda emailingizga 6 xonali tasdiqlash kodi yuboriladi. Kodni kiritmasdan hisob faollashmaydi.</p>
+  </section>
+
+  {% if verification_pending %}
+  <form class="panel auth-form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <h2 data-i18n="register.verifyTitle">Kodni tasdiqlash</h2>
+    <p class="lead" data-i18n-html="register.verifyLead" data-i18n-var-email="{{ pending_email }}">Kod <strong>{{ pending_email }}</strong> ga yuborildi. Agar xohlasangiz ma'lumotni qayta kiriting.</p>
+    <label><span data-i18n="register.verifyCode">Tasdiqlash kodi</span>
+      <input type="text" name="verification_code" inputmode="numeric" maxlength="6" placeholder="6 xonali kod" data-i18n-placeholder="register.verifyCodePlaceholder" required />
+    </label>
+    <div class="row-inline">
+      <button class="btn btn-primary" type="submit" data-i18n="register.activate">Hisobni faollashtirish</button>
+      <button
+        class="btn btn-secondary"
+        type="submit"
+        name="action"
+        value="resend"
+        {% if pending_resend_seconds %}disabled{% endif %}
+        data-resend-button
+        data-resend-seconds="{{ pending_resend_seconds or 0 }}"
+        data-otp-duration="120"
+        data-i18n="register.resend"
+      >
+        Kodni qayta yuborish
+      </button>
+      <button class="btn btn-nav" type="submit" name="action" value="reset" data-i18n="register.editData">Ma'lumotlarni o'zgartirish</button>
+    </div>
+    <p class="text-muted mt-3" data-resend-status>
+      {% if pending_resend_seconds %}
+        <span data-i18n="otp.resend.statusWait" data-i18n-var-seconds="{{ pending_resend_seconds }}">Kod kelmadimi? Qayta yuborish {{ pending_resend_seconds }} soniyadan keyin ochiladi.</span>
+      {% else %}
+        <span data-i18n="otp.resend.statusReady">Kod kelmadimi? Kodni qayta yuborishingiz mumkin.</span>
+      {% endif %}
+    </p>
+    <div class="flash flash-info mt-3">
+      <strong data-i18n="register.details">Ma'lumotlar:</strong> {{ pending_full_name }} | {{ pending_phone }} | {{ pending_email }}
+    </div>
+  </form>
+  {% else %}
+  <form class="panel auth-form" method="post" data-register-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="action" value="send_code" />
+    <div class="split-fields">
+      <label><span data-i18n="register.firstName">Ism</span>
+        <input type="text" name="first_name" placeholder="Azizbek" autocomplete="given-name" required value="{{ request.form.get('first_name', '') }}" />
+      </label>
+      <label><span data-i18n="register.lastName">Familiya</span>
+        <input type="text" name="last_name" placeholder="Tursunov" autocomplete="family-name" required value="{{ request.form.get('last_name', '') }}" />
+      </label>
+    </div>
+    <label><span data-i18n="register.email">Email</span>
+      <input type="email" name="email" placeholder="siz@gmail.com" required value="{{ request.form.get('email', '') }}" />
+    </label>
+    <label>
+      <span data-i18n="register.phone">Telefon</span>
+      <div class="phone-composer" data-register-phone-composer>
+        <select class="phone-code-select" data-phone-country-code aria-label="Country code">
+          <option value="+998" selected>+998 Uzbekistan</option>
+          <option value="+7">+7 Kazakhstan/Russia</option>
+          <option value="+90">+90 Turkiye</option>
+          <option value="+971">+971 UAE</option>
+          <option value="+1">+1 USA/Canada</option>
+          <option value="+44">+44 UK</option>
+          <option value="+49">+49 Germany</option>
+          <option value="+86">+86 China</option>
+          <option value="+91">+91 India</option>
+          <option value="+82">+82 South Korea</option>
+          <option value="+81">+81 Japan</option>
+        </select>
+        <input
+          type="tel"
+          class="phone-local-input"
+          data-phone-local-part
+          placeholder="90 123 45 67"
+          inputmode="tel"
+          autocomplete="tel-national"
+          minlength="5"
+          maxlength="14"
+          required
+        />
+      </div>
+      <input type="hidden" id="phone" name="phone" data-phone-combined required value="{{ request.form.get('phone', '') }}" />
+      <small class="cluster-note phone-help">Kod tanlang, qolgan raqamni kiriting. Masalan: +998 90 123 45 67</small>
+    </label>
+    <label><span data-i18n="register.password">Parol</span>
+      <input type="password" name="password" minlength="8" placeholder="Kamida 8 belgi" data-i18n-placeholder="register.passwordPlaceholder" required />
+    </label>
+    <button class="btn btn-primary" type="submit" data-i18n="register.sendCode">Tasdiqlash kodini yuborish</button>
+    <p><span data-i18n="register.hasAccount">Hisobingiz bormi?</span> <a href="{{ url_for('login') }}" data-i18n="register.loginLink">Kirish</a>.</p>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

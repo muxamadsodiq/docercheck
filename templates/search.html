@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Bilet qidirish{% endblock %}
+
+{% block content %}
+<div class="search-page">
+{% set pdefaults = passenger_defaults or {'adult_count': 1, 'child_count': 0, 'infant_count': 0} %}
+<h1 data-i18n="search.title">Bilet qidirish</h1>
+
+<form class="panel glass-card form-grid search-form minimal" method="get" action="{{ url_for('search') }}" id="airportSearchForm" data-liquid-search-form>
+  <div class="airport-autocomplete search-glass-field" data-search-liquid-field>
+    <label class="search-field-label">
+      <span class="search-field-title" data-i18n="search.from">Qayerdan</span>
+      <input
+        class="airport-input"
+        data-airport-input
+        data-target="from_airport"
+        type="text"
+        name="from_airport"
+        autocomplete="off"
+        required
+        title="Faqat lotin belgilaridan foydalaning"
+        data-i18n-title="search.latinInputTitle"
+        placeholder="Masalan: TAS, Tashkent, Istanbul"
+        data-i18n-placeholder="search.fromPlaceholder"
+        value="{{ request.args.get('from_airport', request.args.get('from_city', '')) }}"
+      />
+    </label>
+    <div class="airport-suggestions" data-suggestions-for="from_airport"></div>
+  </div>
+
+  <div class="airport-autocomplete search-glass-field" data-search-liquid-field>
+    <label class="search-field-label">
+      <span class="search-field-title" data-i18n="search.to">Qayerga</span>
+      <input
+        class="airport-input"
+        data-airport-input
+        data-target="to_airport"
+        type="text"
+        name="to_airport"
+        autocomplete="off"
+        required
+        title="Faqat lotin belgilaridan foydalaning"
+        data-i18n-title="search.latinInputTitle"
+        placeholder="Masalan: IST, Istanbul, Dubai"
+        data-i18n-placeholder="search.toPlaceholder"
+        value="{{ request.args.get('to_airport', request.args.get('to_city', '')) }}"
+      />
+    </label>
+    <div class="airport-suggestions" data-suggestions-for="to_airport"></div>
+  </div>
+
+  <label class="search-glass-field search-field-label search-date-field" data-search-liquid-field data-date-field="true" data-date-click-scope="true">
+    <span class="search-field-title" data-i18n="search.date">Uchish sanasi</span>
+    <input class="search-date-input" type="date" name="departure_date" placeholder="Sana tanlang" data-i18n-placeholder="search.datePlaceholder" min="{{ today_date }}" value="{{ request.args.get('departure_date', '') }}" />
+  </label>
+
+  <div class="search-glass-field search-field-label passenger-mix-field passenger-picker-field" data-search-liquid-field data-passenger-picker>
+    <span class="search-field-title passenger-mix-title" data-i18n="search.passengerMixTitle">Yo'lovchi tarkibi</span>
+
+    <button
+      type="button"
+      class="passenger-picker-trigger"
+      data-passenger-trigger
+      aria-haspopup="dialog"
+      aria-expanded="false"
+      aria-controls="passengerPickerPanel"
+      data-i18n-aria-label="search.passengerPickerAria"
+      aria-label="Yo'lovchi tarkibini ochish"
+    >
+      <span class="passenger-picker-summary" data-passenger-summary>{{ pdefaults.adult_count + pdefaults.child_count + pdefaults.infant_count }} yo'lovchi</span>
+      <span class="passenger-picker-chevron" aria-hidden="true">▾</span>
+    </button>
+
+    <div class="passenger-picker-panel" id="passengerPickerPanel" data-passenger-panel hidden>
+      <div class="passenger-picker-row" data-passenger-kind="adult">
+        <div class="passenger-picker-label">
+          <strong data-i18n="search.passengerAgeAdult">12+ yosh</strong>
+          <span data-i18n="search.passengerLabelAdult">Kattalar</span>
+        </div>
+        <div class="passenger-picker-stepper">
+          <button type="button" data-passenger-action="decrement" data-passenger-target="adult" data-i18n-aria-label="search.passengerAriaAdultDecrement" aria-label="Kattalar sonini kamaytirish">-</button>
+          <span data-passenger-value="adult">{{ pdefaults.adult_count }}</span>
+          <button type="button" data-passenger-action="increment" data-passenger-target="adult" data-i18n-aria-label="search.passengerAriaAdultIncrement" aria-label="Kattalar sonini oshirish">+</button>
+        </div>
+      </div>
+
+      <div class="passenger-picker-row" data-passenger-kind="child">
+        <div class="passenger-picker-label">
+          <strong data-i18n="search.passengerAgeChild">2-12 yosh</strong>
+          <span data-i18n="search.passengerLabelChild">Bolalar</span>
+        </div>
+        <div class="passenger-picker-stepper">
+          <button type="button" data-passenger-action="decrement" data-passenger-target="child" data-i18n-aria-label="search.passengerAriaChildDecrement" aria-label="Bolalar sonini kamaytirish">-</button>
+          <span data-passenger-value="child">{{ pdefaults.child_count }}</span>
+          <button type="button" data-passenger-action="increment" data-passenger-target="child" data-i18n-aria-label="search.passengerAriaChildIncrement" aria-label="Bolalar sonini oshirish">+</button>
+        </div>
+      </div>
+
+      <div class="passenger-picker-row" data-passenger-kind="infant">
+        <div class="passenger-picker-label">
+          <strong data-i18n="search.passengerAgeInfant">0-2 yosh</strong>
+          <span data-i18n="search.passengerLabelInfant">Chaqaloq</span>
+        </div>
+        <div class="passenger-picker-stepper">
+          <button type="button" data-passenger-action="decrement" data-passenger-target="infant" data-i18n-aria-label="search.passengerAriaInfantDecrement" aria-label="Chaqaloqlar sonini kamaytirish">-</button>
+          <span data-passenger-value="infant">{{ pdefaults.infant_count }}</span>
+          <button type="button" data-passenger-action="increment" data-passenger-target="infant" data-i18n-aria-label="search.passengerAriaInfantIncrement" aria-label="Chaqaloqlar sonini oshirish">+</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" name="adult_count" value="{{ pdefaults.adult_count }}" data-passenger-hidden="adult" />
+    <input type="hidden" name="child_count" value="{{ pdefaults.child_count }}" data-passenger-hidden="child" />
+    <input type="hidden" name="infant_count" value="{{ pdefaults.infant_count }}" data-passenger-hidden="infant" />
+  </div>
+
+  <div class="search-actions">
+      <button class="btn btn-primary search-glass-button" type="submit" data-i18n="search.submit">Qidirish</button>
+  </div>
+</form>
+
+<section class="sub-block">
+  <h2 data-i18n="search.results">Natijalar</h2>
+  <div class="cards one-col">
+    {% for f in flights %}
+    <article class="card glass-card">
+      <div class="row-between">
+        <div>
+          <h3>
+            {{ f.from_city }}{% if f.from_airport_code %} ({{ f.from_airport_code }}){% endif %}
+            →
+            {{ f.to_city }}{% if f.to_airport_code %} ({{ f.to_airport_code }}){% endif %}
+          </h3>
+          <p>
+            <span data-i18n="search.flight">Reys</span>: {{ f.route_code or '-' }} |
+            {{ f.airline }} |
+            <span data-i18n="search.dateLabel">Sana</span>: {{ f.departure_date }} {{ f.departure_time or '' }} |
+            <span data-i18n="search.class">Klass</span>: {{ f.travel_class or 'Economy' }} |
+            <span data-i18n="search.seats">Joy</span>: {{ f.seats }}
+          </p>
+          <p>
+            <span data-i18n="search.untilDeparture">Reysgacha</span>: <strong class="departure-countdown" data-departure="{{ f.departure_date }} {{ f.departure_time or '00:00' }}">hisoblanmoqda...</strong>
+          </p>
+          <p class="price">
+            {% if (f.price_currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(f.price_value or 0) }} USD
+            {% else %}
+              {{ '{:,.0f}'.format(f.price_value or f.price_uzs) }} UZS
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <a href="{{ url_for('book_flight', flight_id=f.id, adult_count=pdefaults.adult_count, child_count=pdefaults.child_count, infant_count=pdefaults.infant_count) }}" class="btn btn-primary" data-i18n="search.booking">Bron qilish</a>
+        </div>
+      </div>
+    </article>
+    {% else %}
+    <article class="card glass-card">
+      <p data-i18n="search.notFound">Mos reys topilmadi.</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Mening ticketlarim{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <section class="ticket-shell ticket-shell-spotlight">
+    <p class="eyebrow">MY DOCUMENTS</p>
+    <h1>Mening ticketlarim</h1>
+    <p class="lead">Tasdiqlangan barcha biletlar shu yerda jamlangan. Ularni ko'rish, tekshirish va yuklab olish imkoniyati bir joyda berilgan.</p>
+  </section>
+
+  <aside class="panel glass-card">
+    <h3>Qisqacha</h3>
+    <div class="summary-grid compact">
+      <article class="summary-card">
+        <span class="summary-label">Jami ticket</span>
+        <strong>{{ tickets|length }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Saqlash</span>
+        <strong>Kabinet va yuklab olish</strong>
+      </article>
+    </div>
+  </aside>
+</div>
+
+<div class="cards one-col">
+  {% for t in tickets %}
+  <article class="card ticket-card">
+    <div class="ticket-card-head">
+      <div>
+        <p class="eyebrow">TICKET #{{ t.ticket_no }}</p>
+        <h3 class="mb-1">
+          {{ t.from_city }}{% if t.from_airport_code %} ({{ t.from_airport_code }}){% endif %}
+          →
+          {{ t.to_city }}{% if t.to_airport_code %} ({{ t.to_airport_code }}){% endif %}
+        </h3>
+        <p class="theme-note mb-0">{{ t.airline }} • Reys {{ t.route_code or '-' }} • {{ t.departure_date|date_dot }} {{ t.departure_time or '' }}</p>
+      </div>
+      <div class="badge-row">
+        <span class="badge">{{ t.travel_class or 'Economy' }}</span>
+        <span class="badge">{% if t.payment_method %}{{ t.payment_method|upper }}{% else %}PAID{% endif %}</span>
+      </div>
+    </div>
+
+    <div class="detail-grid mt-3">
+      <div><strong>Yo'lovchilar:</strong> {{ t.passenger_count }}</div>
+      <div><strong>Tarkib:</strong> ADT {{ t.adult_count or 0 }} • CHD {{ t.child_count or 0 }} • INF {{ t.infant_count or 0 }}</div>
+      <div><strong>Bagaj:</strong> {% if t.baggage_option == 'premium' %}Premium bagaj{% elif t.baggage_option == 'cabin_only' %}Bez bagaj{% else %}Bagaj bilan{% endif %}</div>
+      <div><strong>To'lov:</strong>
+        {% if (t.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(t.amount_value or 0) }} USD
+        {% else %}
+          {{ '{:,.0f}'.format(t.amount_value or t.amount_uzs or 0) }} UZS
+        {% endif %}
+      </div>
+      <div><strong>Baza/Fee:</strong>
+        {% if (t.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(t.base_amount_value or t.amount_value or 0) }} + {{ '%.2f'|format(t.method_fee_value or 0) }} USD
+        {% else %}
+          {{ '{:,.0f}'.format(t.base_amount_value or t.base_amount_uzs or t.amount_uzs or 0) }} + {{ '{:,.0f}'.format(t.method_fee_value or t.method_fee_uzs or 0) }} UZS
+        {% endif %}
+        ({{ '%.2f'|format(t.method_fee_pct or 0) }}%)
+      </div>
+      <div><strong>Yo'lovchi ismlari:</strong> {{ t.passenger_names or '-' }}</div>
+    </div>
+
+    <div class="row-inline mt-4">
+      <a class="btn btn-secondary" href="{{ url_for('ticket_public_view', ticket_no=t.ticket_no) }}" target="_blank" rel="noreferrer">Web ko'rish</a>
+      <a class="btn btn-primary" href="{{ url_for('download_ticket', ticket_no=t.ticket_no) }}">PDF yuklab olish</a>
+    </div>
+  </article>
+  {% else %}
+  <article class="card panel-soft"><p>Hozircha ticket mavjud emas.</p></article>
+  {% endfor %}
+</div>
+{% endblock %}

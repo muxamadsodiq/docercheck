@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Reys tafsiloti{% endblock %}
+
+{% block content %}
+<h1>Reys nazorati: {{ flight.route_code or ('ID ' ~ flight.id) }}</h1>
+<article class="panel">
+  <p><strong>Yo'nalish:</strong> {{ flight.from_city }} ({{ flight.from_airport_code or '-' }}) → {{ flight.to_city }} ({{ flight.to_airport_code or '-' }})</p>
+  <p><strong>Sana/Vaqt:</strong> {{ flight.departure_date|date_dot }} {{ flight.departure_time or '' }}</p>
+  <p><strong>Klass:</strong> {{ flight.travel_class or 'Economy' }} | <strong>Aviakompaniya:</strong> {{ flight.airline }}</p>
+  <p><strong>Narx:</strong>
+    {% if (flight.price_currency or 'UZS') == 'USD' %}
+      {{ '%.2f'|format(flight.price_value or 0) }} USD
+    {% else %}
+      {{ '{:,.0f}'.format(flight.price_value or flight.price_uzs) }} UZS
+    {% endif %}
+    | <strong>Joy:</strong> {{ flight.seats }} | <strong>Status:</strong> {{ flight.status }}</p>
+  <a class="btn btn-secondary" href="{{ url_for('admin_flights_page') }}">Reyslar sahifasiga qaytish</a>
+</article>
+
+<section class="sub-block">
+  <div class="row-between mb-4">
+    <h2 class="mb-0">Shu reys bo'yicha yo'lovchilar va biletlar</h2>
+    <div class="row-inline">
+      <a class="btn btn-success" href="{{ url_for('admin_export_passengers', flight_id=flight.id, export_format='standard') }}">
+        📥 HK format
+      </a>
+      <a class="btn btn-secondary" href="{{ url_for('admin_export_passengers', flight_id=flight.id, export_format='roster') }}">
+        📋 Roster Excel
+      </a>
+    </div>
+  </div>
+  <p class="theme-note mb-4">HK format yo'nalish kodini va yo'lovchilar sonini birlashtirib fayl nomini yaratadi, masalan <strong>TAS-JED_HK1.xlsx</strong>. Roster format esa airline uslubidagi alohida manifest bo'lib qoladi.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Booking</th>
+          <th>F.I.Sh</th>
+          <th>Passenger Gmail</th>
+          <th>Telefon</th>
+          <th>Account</th>
+          <th>Passport</th>
+          <th>Gender</th>
+          <th>Payment</th>
+          <th>Booking holati</th>
+          <th>Ticket #</th>
+          <th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in passengers %}
+        <tr>
+          <td>#{{ p.booking_id }}</td>
+          <td>{{ p.full_name }}<br/><small>{{ p.email }}</small></td>
+          <td>{{ p.notification_email or '-' }}</td>
+          <td>{{ p.phone or '-' }}</td>
+          <td>{{ p.account_id }}</td>
+          <td>{{ p.passport_number or '-' }}{% if p.passport_series %}<br/><small>{{ p.passport_series }}</small>{% endif %}</td>
+          <td>{{ p.gender or '-' }}</td>
+          <td>{{ p.payment_status or '-' }}{% if p.payment_method %} ({{ p.payment_method|upper }}){% endif %}</td>
+          <td>{{ p.booking_status }}</td>
+          <td>{{ p.ticket_no or '-' }}</td>
+          <td>
+            {% if p.ticket_no %}
+            <a class="btn btn-small btn-primary" href="{{ url_for('download_ticket', ticket_no=p.ticket_no) }}">PDF</a>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="11">Hozircha bu reys bo'yicha bron yo'q.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

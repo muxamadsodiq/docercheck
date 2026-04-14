@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | To'lov yuborish{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <section class="ticket-shell ticket-shell-spotlight glass-card">
+    <p class="eyebrow" data-i18n="payment.gateway">PAYMENT GATEWAY</p>
+    <h1 data-i18n="payment.title">To'lovni yuborish</h1>
+    <p class="lead" data-i18n="payment.lead">Bron bo'yicha ma'lumotlarni tekshirib, to'lovni yuboring. Wallet tanlansa summa shu akkaunt balansidan yechiladi, tasdiqlangach esa bilet ma'lumoti kabinet va email orqali yetkaziladi.</p>
+
+    <div class="summary-grid mt-3">
+      <article class="summary-card">
+        <span class="summary-label">Bron ID</span>
+        <strong>#{{ booking.id }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Reys</span>
+        <strong>{{ booking.route_code or '-' }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Klass</span>
+        <strong>{{ booking.travel_class or 'Economy' }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Jami</span>
+        <strong>
+          {% if (payment.currency or 'UZS') == 'USD' %}
+            {{ '%.2f'|format(payment.amount_value or 0) }} USD
+          {% else %}
+            {{ '{:,.0f}'.format(payment.amount_value or payment.amount_uzs) }} UZS
+          {% endif %}
+        </strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Baza tarif</span>
+        <strong>
+          {% if (payment.currency or 'UZS') == 'USD' %}
+            {{ '%.2f'|format(payment.base_amount_value or payment.amount_value or 0) }} USD
+          {% else %}
+            {{ '{:,.0f}'.format(payment.base_amount_value or payment.base_amount_uzs or payment.amount_uzs or 0) }} UZS
+          {% endif %}
+        </strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Method fee</span>
+        <strong>
+          {{ '%.2f'|format(payment.method_fee_pct or 0) }}%
+          {% if (payment.currency or 'UZS') == 'USD' %}
+            ({{ '%.2f'|format(payment.method_fee_value or 0) }} USD)
+          {% else %}
+            ({{ '{:,.0f}'.format(payment.method_fee_value or payment.method_fee_uzs or 0) }} UZS)
+          {% endif %}
+        </strong>
+      </article>
+      {% if booking.reservation_expires_at %}
+      <article class="summary-card reservation-card" data-reservation-expires="{{ booking.reservation_expires_at }}" data-reservation-reload="1">
+        <span class="summary-label" data-i18n="payment.remaining">Qolgan vaqt</span>
+        <strong class="reservation-countdown">00:00</strong>
+      </article>
+      {% endif %}
+    </div>
+
+    <article class="panel panel-soft glass-card mt-4">
+      <div class="route-banner">
+        <div>
+          <span class="route-code">{{ booking.from_airport_code or booking.from_city[:3]|upper }}</span>
+          <p>{{ booking.from_city }}</p>
+        </div>
+        <div class="route-arrow">→</div>
+        <div class="text-end">
+          <span class="route-code">{{ booking.to_airport_code or booking.to_city[:3]|upper }}</span>
+          <p>{{ booking.to_city }}</p>
+        </div>
+      </div>
+      <div class="detail-grid">
+        <div><strong>Sana/Vaqt:</strong> {{ booking.departure_date|date_dot }} {{ booking.departure_time or '' }}</div>
+        <div><strong>Aviakompaniya:</strong> {{ booking.airline }}</div>
+        <div><strong>Bagaj:</strong> {% if booking.baggage_option == 'premium' %}Premium bagaj{% elif booking.baggage_option == 'cabin_only' %}Bez bagaj{% else %}Bagaj bilan{% endif %}</div>
+        <div><strong>Yuboriladigan Gmail:</strong> {{ notification_email or g.user.email }}</div>
+        <div><strong>To'lovdan keyin:</strong> guruh bileti kabinet va emailda tayyor bo'ladi</div>
+      </div>
+      <div class="row-inline mt-3">
+        <a class="btn btn-nav" href="{{ url_for('profile') }}">Profilni tahrirlash</a>
+        <a class="btn btn-nav" href="{{ url_for('add_passengers', booking_id=booking.id) }}">Yo'lovchilarni tahrirlash</a>
+      </div>
+    </article>
+  </section>
+
+  <aside class="panel glass-card">
+    <h3>Balans va yuborish</h3>
+    <p><strong>Account ID:</strong> {{ g.user.account_id }}</p>
+    <p><strong>Wallet balans:</strong> {{ '{:,.0f}'.format(user_balance_uzs) }} UZS | {{ '%.2f'|format(user_balance_usd) }} USD</p>
+    <p class="theme-note">Wallet orqali to'lansa ticket avtomatik tayyorlanadi. Gmail to'g'ri kiritilgan bo'lsa bilet ma'lumoti emailga ham yuboriladi.</p>
+    <div class="badge-row">
+      <span class="badge badge-success">Tezkor tasdiq</span>
+      <span class="badge">Email xabarnoma</span>
+      <span class="badge">Yordam markazi</span>
+    </div>
+    <div class="row-inline mt-3">
+      <a class="btn btn-secondary" href="{{ url_for('wallet') }}">Hisob to'ldirish</a>
+    </div>
+  </aside>
+</div>
+
+<article class="panel panel-soft glass-card mt-4">
+  <h3>To'lov usullari</h3>
+  <p class="lead">Wallet orqali to'lasangiz summa darhol hisobdan yechiladi va bilet avtomatik tayyorlanadi. Click/Payme tanlansa so'rov admin tasdig'iga tushadi.</p>
+  <div class="payment-method-grid method-preview-grid">
+    <article class="method-option-card is-preview">
+      <strong>Wallet</strong>
+      <span>Fee: {{ '%.2f'|format(payment_fee_options.wallet or 0) }}% (odatda 0%).</span>
+    </article>
+    <article class="method-option-card is-preview">
+      <strong>Click</strong>
+      <span>Fee: {{ '%.2f'|format(payment_fee_options.click or 0) }}%, so'rov admin ko'rib chiqishiga tushadi.</span>
+    </article>
+    <article class="method-option-card is-preview">
+      <strong>Payme</strong>
+      <span>Fee: {{ '%.2f'|format(payment_fee_options.payme or 0) }}%, admin tasdig'idan keyin davom etadi.</span>
+    </article>
+  </div>
+</article>
+
+<form
+  class="panel form-grid payment-section glass-card"
+  method="post"
+  data-payment-fee-preview
+  data-currency="{{ payment.currency or 'UZS' }}"
+  data-base-amount="{{ payment.base_amount_value if payment.base_amount_value is not none else payment.amount_value if payment.amount_value is not none else payment.amount_uzs }}"
+  data-fee-wallet="{{ payment_fee_options.wallet or 0 }}"
+  data-fee-click="{{ payment_fee_options.click or 0 }}"
+  data-fee-payme="{{ payment_fee_options.payme or 0 }}"
+>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  {% set selected_payment_method = request.form.get('payment_method', payment.payment_method or 'wallet') %}
+  <div>
+    <h3 class="mb-2" data-i18n="payment.method">To'lov usulini tanlang</h3>
+    <div class="payment-method-grid">
+      <label class="method-option-card">
+        <input type="radio" name="payment_method" value="wallet" data-method-fee="{{ payment_fee_options.wallet or 0 }}" {% if selected_payment_method == 'wallet' %}checked{% endif %} required />
+        <span class="method-option-body">
+          <strong>Wallet</strong>
+          <small>Balansdan avtomatik yechiladi</small>
+        </span>
+      </label>
+      <label class="method-option-card">
+        <input type="radio" name="payment_method" value="click" data-method-fee="{{ payment_fee_options.click or 0 }}" {% if selected_payment_method == 'click' %}checked{% endif %} required />
+        <span class="method-option-body">
+          <strong>Click</strong>
+          <small>Admin tekshiruviga yuboriladi</small>
+        </span>
+      </label>
+      <label class="method-option-card">
+        <input type="radio" name="payment_method" value="payme" data-method-fee="{{ payment_fee_options.payme or 0 }}" {% if selected_payment_method == 'payme' %}checked{% endif %} required />
+        <span class="method-option-body">
+          <strong>Payme</strong>
+          <small>Admin tasdig'i bilan yakunlanadi</small>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <article class="card glass-card">
+    <h3 class="mb-2">To'lov hisob-kitobi</h3>
+    <div class="detail-grid">
+      <div><strong>Baza tarif:</strong> <span data-payment-base>
+        {% if (payment.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(payment.base_amount_value or payment.amount_value or 0) }}
+        {% else %}
+          {{ '{:,.0f}'.format(payment.base_amount_value or payment.base_amount_uzs or payment.amount_uzs or 0) }}
+        {% endif %}
+      </span> <span data-payment-currency>{{ payment.currency or 'UZS' }}</span></div>
+      <div><strong>Method fee:</strong> <span data-payment-fee-label>{{ '%.2f'|format(payment.method_fee_pct or 0) }}%</span></div>
+      <div><strong>Fee summa:</strong> <span data-payment-fee>
+        {% if (payment.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(payment.method_fee_value or 0) }}
+        {% else %}
+          {{ '{:,.0f}'.format(payment.method_fee_value or payment.method_fee_uzs or 0) }}
+        {% endif %}
+      </span> <span data-payment-currency>{{ payment.currency or 'UZS' }}</span></div>
+      <div><strong>Jami:</strong> <span data-payment-total>
+        {% if (payment.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(payment.amount_value or 0) }}
+        {% else %}
+          {{ '{:,.0f}'.format(payment.amount_value or payment.amount_uzs or 0) }}
+        {% endif %}
+      </span> <span data-payment-currency>{{ payment.currency or 'UZS' }}</span></div>
+    </div>
+  </article>
+
+  <label class="checkline">
+    <input type="checkbox" name="confirm_details" value="1" required />
+    Ma'lumotlarni tekshirdim va to'lovga o'tishga roziman
+  </label>
+
+  <div class="email-note">
+    <strong>Yuborish manzili:</strong> {{ notification_email or g.user.email }}
+    <span class="theme-note">Bilet tasdiqlangach ma'lumot shu emailga jo'natiladi.</span>
+    <div class="email-pill-list">
+      {% for email in (notification_email.split(', ') if notification_email else [g.user.email]) %}
+      <span class="email-pill">{{ email }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <button class="btn btn-primary" type="submit" data-i18n="payment.submit">To'lovni yuborish</button>
+</form>
+{% endblock %}

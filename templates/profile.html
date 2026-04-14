@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Profil{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <section class="ticket-shell ticket-shell-spotlight">
+    <h1 data-i18n="profile.title">Profil ma'lumotlari</h1>
+    <p class="lead" data-i18n="profile.lead">Bron/ticket uchun shaxsiy ma'lumotlar aniq bo'lishi shart. Sana ko'rinishida endi nuqtali format ishlatiladi: DD.MM.YYYY.</p>
+    <div class="email-note mt-3">
+      <strong data-i18n="profile.important">Muhim:</strong>
+      <span data-i18n="profile.importantDetails">shu sahifadagi telefon, passport, tug'ilgan sana, jins va Gmail ticket yaratish hamda Gmailga yuborishda ishlatiladi.</span>
+    </div>
+  </section>
+
+  <aside class="panel glass-card">
+    <h3 data-i18n="profile.usedForTitle">Ticket uchun ishlatiladi</h3>
+    <ul>
+      <li data-i18n="profile.usedForPhone">Telefon raqam</li>
+      <li data-i18n="profile.usedForPassport">Passport raqam va seriya</li>
+      <li data-i18n="profile.usedForBirthGender">Tug'ilgan sana va jins</li>
+      <li data-i18n="profile.usedForPassportDates">Passport berilgan va tugash sanasi</li>
+      <li data-i18n="profile.usedForGmail">Shu sahifadagi Gmail manzili</li>
+    </ul>
+  </aside>
+</div>
+
+<div class="profile-tabs" data-profile-tabs>
+  <button class="profile-tab {% if (active_tab or 'profile') == 'profile' %}is-active{% endif %}" type="button" data-profile-tab-target="profile" data-i18n="profile.profileTab">Shaxsiy ma'lumotlar</button>
+  <button class="profile-tab {% if (active_tab or 'profile') == 'bookings' %}is-active{% endif %}" type="button" data-profile-tab-target="bookings">Bronlar</button>
+  <button class="profile-tab {% if (active_tab or 'profile') == 'devices' %}is-active{% endif %}" type="button" data-profile-tab-target="devices">Qurilmalar</button>
+  <button class="profile-tab {% if (active_tab or 'profile') == 'security' %}is-active{% endif %}" type="button" data-profile-tab-target="security" data-i18n="profile.securityTab">Xavfsizlik</button>
+</div>
+
+<section class="profile-tab-panel {% if (active_tab or 'profile') == 'profile' %}is-active{% endif %}" data-profile-panel="profile">
+  <form class="panel form-grid" method="post" id="profileForm" data-profile-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="action" value="save_profile" />
+    <input type="hidden" name="tab" value="profile" />
+    <input type="hidden" name="next" value="{{ next_url or '' }}" />
+
+    <h3 class="mb-0 profile-grid-full" data-i18n="profile.profileTab">Shaxsiy ma'lumotlar</h3>
+
+    <label>Telefon raqam *
+      <input type="text" name="phone" id="phone" required value="{{ request.form.get('phone', user_phone if user_phone else '') }}" placeholder="Masalan: +998901234567" />
+      <small id="phone_error" class="field-error"></small>
+    </label>
+
+    <label>Passport raqam / Seriyasi (masalan: AA1234567)
+      <input type="text" name="passport_number" id="passport_number" required value="{{ request.form.get('passport_number', user_profile.passport_number if user_profile else '') }}" placeholder="AABBCCDDEE" />
+      <small id="passport_number_error" class="field-error"></small>
+    </label>
+
+    <label>Passport seriyasi (masalan: AA)
+      <input type="text" name="passport_series" id="passport_series" value="{{ request.form.get('passport_series', user_profile.passport_series if user_profile else '') }}" placeholder="masalan: AA" maxlength="2" />
+      <small id="passport_series_error" class="field-error"></small>
+    </label>
+
+    <label>Tug'ilgan sana *
+      <input type="date" name="birth_date" id="birth_date" required max="{{ today_date }}" value="{{ request.form.get('birth_date', user_profile.birth_date if user_profile else '') }}" />
+      <small id="birth_date_error" class="field-error"></small>
+    </label>
+
+    <label>Jinsiyati *
+      <select name="gender" required>
+        <option value="">Tanlang</option>
+        <option value="male" {% if request.form.get('gender', user_profile.gender if user_profile else '') == 'male' %}selected{% endif %}>Erkak</option>
+        <option value="female" {% if request.form.get('gender', user_profile.gender if user_profile else '') == 'female' %}selected{% endif %}>Ayol</option>
+      </select>
+    </label>
+
+    <label>Millat / Fuqaroligi *
+      <input type="text" name="nationality" required value="{{ request.form.get('nationality', user_profile.nationality if user_profile else '') }}" placeholder="Masalan: Uzbek, Tajik, Qozoq..." />
+    </label>
+
+    <label>Passport berish sanasi *
+      <input type="date" name="passport_issue_date" id="passport_issue_date" min="{{ ten_years_ago_date }}" max="{{ today_date }}" value="{{ request.form.get('passport_issue_date', user_profile.passport_issue_date if user_profile else '') }}" />
+      <small id="passport_issue_date_error" class="field-error"></small>
+    </label>
+
+    <label>Passport muddati tugash sanasi *
+      <input type="date" name="passport_expiration_date" id="passport_expiration_date" min="{{ passport_expiration_min_date }}" {% if passport_expiration_max_date %}max="{{ passport_expiration_max_date }}"{% endif %} value="{{ request.form.get('passport_expiration_date', user_profile.passport_expiration_date if user_profile else '') }}" />
+      <small id="passport_expiration_date_error" class="field-error"></small>
+    </label>
+
+    <label>Ticket yuboriladigan Gmail *
+      <input type="email" name="notification_email" id="notification_email" required value="{{ request.form.get('notification_email', user_profile.notification_email if user_profile else '') }}" placeholder="masalan: siz@gmail.com" />
+      <small id="notification_email_error" class="field-error"></small>
+    </label>
+
+    <div class="mt-4 profile-submit-row">
+      <button class="btn btn-primary" type="submit" data-i18n="profile.saveProfile">Saqlash</button>
+    </div>
+  </form>
+
+  <article class="panel mt-4 profile-info-panel">
+    <h3 class="mb-0" data-i18n="profile.infoTitle">ℹ️ Muhim ma'lumot</h3>
+    <p data-i18n="profile.infoLead">Bu ma'lumotlar aviakompaniya va rezervatsiya jarayoni uchun kerak bo'ladi. Ticket va PDF boarding passda ko'rinadi.</p>
+    <ul>
+      <li data-i18n-html="profile.infoRequired"><strong>Majburiy:</strong> telefon, passport raqami, passport seriyasi, tug'ilgan sana, jins, fuqarolik, passport berilgan/tugash sanasi, Gmail.</li>
+      <li data-i18n-html="profile.infoIssueDate"><strong>Passport berilgan sana:</strong> oxirgi 10 yil ichida bo'lishi kerak.</li>
+      <li data-i18n-html="profile.infoExpiryDate"><strong>Passport tugash sanasi:</strong> berilgan sanadan keyin va undan 20 yildan oshmagan bo'lishi kerak.</li>
+      <li data-i18n-html="profile.infoTravelRequirement"><strong>Safar talabi:</strong> passport safar sanasida kamida 6 oy amal qilishi kerak.</li>
+      <li data-i18n-html="profile.infoGmailNote"><strong>Gmail:</strong> ticket PDF va web ticket havolasi aynan shu emailga yuboriladi.</li>
+    </ul>
+  </article>
+</section>
+
+<section class="profile-tab-panel {% if (active_tab or 'profile') == 'bookings' %}is-active{% endif %}" data-profile-panel="bookings">
+  <article class="panel glass-card">
+    <div class="row-between">
+      <h3 class="mb-0">Bronlar tarixi</h3>
+      <a class="btn btn-small btn-secondary" href="{{ url_for('search') }}">Yangi bron</a>
+    </div>
+
+    <div class="table-wrap mt-3">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Reys</th>
+            <th>Sana</th>
+            <th>Yo'nalish</th>
+            <th>Holat</th>
+            <th>Amal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bookings %}
+          <tr>
+            <td>#{{ b.id }}</td>
+            <td>{{ b.route_code or '-' }}</td>
+            <td>{{ b.departure_date|date_dot }} {{ b.departure_time or '' }}</td>
+            <td>{{ b.from_city }} → {{ b.to_city }}</td>
+            <td>
+              {% if b.status == 'ticketed' %}
+                <span class="badge badge-success">Ticketed</span>
+              {% elif b.status == 'pending_payment' %}
+                <span class="badge badge-warn">Pending</span>
+              {% elif b.status == 'payment_review' %}
+                <span class="badge">Review</span>
+              {% elif b.status == 'payment_rejected' %}
+                <span class="badge badge-danger">Rejected</span>
+              {% elif b.status == 'cancelled' %}
+                <span class="badge badge-danger">Cancelled</span>
+              {% else %}
+                <span class="badge">{{ b.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if b.status in ['pending_payment', 'payment_rejected'] %}
+                <a class="btn btn-small btn-secondary" href="{{ url_for('payment_upload', booking_id=b.id) }}">To'lov</a>
+              {% elif b.status == 'ticketed' and b.ticket_no %}
+                <a class="btn btn-small btn-primary" href="{{ url_for('download_ticket', ticket_no=b.ticket_no) }}">Ticket</a>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6">Hozircha bronlar mavjud emas.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="profile-tab-panel {% if (active_tab or 'profile') == 'devices' %}is-active{% endif %}" data-profile-panel="devices">
+  <article class="panel glass-card">
+    <h3 class="mb-0">Faol qurilmalar</h3>
+    <p class="theme-note mt-2">Bu yerda akkauntingiz ochilgan qurilmalar ko'rsatiladi. Begona qurilmalarni chiqarib yuborishingiz mumkin.</p>
+
+    <div class="table-wrap mt-3">
+      <table>
+        <thead>
+          <tr>
+            <th>Qurilma</th>
+            <th>IP</th>
+            <th>Oxirgi faollik</th>
+            <th>Kirish vaqti</th>
+            <th>Holat</th>
+            <th>Amal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in device_sessions %}
+          <tr>
+            <td>{{ d.device_label or 'Unknown device' }}</td>
+            <td>{{ d.ip_address or '-' }}</td>
+            <td>{{ d.last_seen_at or '-' }}</td>
+            <td>{{ d.created_at or '-' }}</td>
+            <td>
+              {% if d.session_id == current_auth_session_id %}
+                <span class="badge badge-success">Joriy qurilma</span>
+              {% else %}
+                <span class="badge">Faol</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if d.session_id == current_auth_session_id %}
+                -
+              {% else %}
+                <form method="post" action="{{ url_for('profile_revoke_device', session_id=d.session_id) }}" class="inline-form">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <input type="hidden" name="next" value="{{ next_url or '' }}" />
+                  <button class="btn btn-small btn-danger" type="submit">Chiqarish</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6">Faol qurilmalar topilmadi.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="profile-tab-panel {% if (active_tab or 'profile') == 'security' %}is-active{% endif %}" data-profile-panel="security">
+  <form class="panel form-grid glass-card" method="post" data-security-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="tab" value="security" />
+    <input type="hidden" name="next" value="{{ next_url or '' }}" />
+
+    <h3 class="mb-0 profile-grid-full" data-i18n="profile.changePassword">Parolni o'zgartirish</h3>
+    <p class="theme-note profile-grid-full" style="margin: 0;">
+      Yangi parol kamida 8 belgi, katta harf, kichik harf, raqam va maxsus belgidan iborat bo'lsin.
+      Parolni yangilashdan oldin joriy parolni kiriting va emailingizga yuborilgan tasdiqlash kodini tasdiqlang.
+    </p>
+
+    <label><span data-i18n="profile.currentPassword">Joriy parol</span>
+      <input type="password" name="current_password" autocomplete="current-password" required />
+    </label>
+
+    <label>Tasdiqlash kodi
+      <input type="text" name="verification_code" inputmode="numeric" maxlength="6" placeholder="6 xonali kod" />
+    </label>
+
+    <label><span data-i18n="profile.newPassword">Yangi parol</span>
+      <input type="password" name="new_password" minlength="8" autocomplete="new-password" required />
+    </label>
+
+    <label><span data-i18n="profile.confirmNewPassword">Yangi parolni tasdiqlang</span>
+      <input type="password" name="confirm_new_password" minlength="8" autocomplete="new-password" required />
+    </label>
+
+    <div class="mt-4 profile-submit-row">
+      <button class="btn btn-secondary" type="submit" name="action" value="send_password_code" formnovalidate>Kodni yuborish</button>
+      <button class="btn btn-primary" type="submit" name="action" value="change_password" data-i18n="profile.savePassword">Parolni yangilash</button>
+    </div>
+  </form>
+</section>
+
+{% endblock %}

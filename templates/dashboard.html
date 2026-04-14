@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Kabinet{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <section class="ticket-shell ticket-shell-spotlight glass-card">
+    <h1>Foydalanuvchi kabineti</h1>
+    {% if g.user %}
+    <p class="lead">Account ID: <strong>{{ g.user.account_id }}</strong> | Email: {{ g.user.email }}</p>
+    <p class="lead">Wallet balans: <strong>{{ '{:,.0f}'.format(balance_uzs) }} UZS</strong> | <strong>{{ '%.2f'|format(balance_usd) }} USD</strong></p>
+    <p class="lead">Hisob raqamlar: UZS <strong>{{ uzs_account_no }}</strong> | USD <strong>{{ usd_account_no }}</strong></p>
+    <div class="row-inline">
+      <a class="btn btn-secondary" href="{{ url_for('wallet') }}">Hisobni to'ldirish</a>
+      <a class="btn btn-secondary" href="{{ url_for('my_tickets') }}">Mening ticketlarim</a>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="panel glass-card">
+    <h3>Qisqacha holat</h3>
+    <div class="summary-grid compact">
+      <article class="summary-card">
+        <span class="summary-label">Bronlar</span>
+        <strong>{{ bookings|length }}</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Wallet so'rov</span>
+        <strong>{{ wallet_requests|length }}</strong>
+      </article>
+    </div>
+  </aside>
+</div>
+
+{% if not profile_ok %}
+<div class="flash flash-warning">Pasport ma'lumotlari to'liq emas. <a href="{{ url_for('profile') }}">Profilni to'ldiring</a>.</div>
+{% endif %}
+
+<section class="sub-block">
+  <h2>Profil holati</h2>
+  <article class="card glass-card p-4">
+    <p class="mb-2"><strong>To'liqlik:</strong> {{ profile_completion }}%</p>
+    <progress class="profile-progress-native" value="{{ profile_completion | int }}" max="100"></progress>
+    <p class="text-muted mt-3">Aviakompaniya va ticket uchun profilni 100% qilib to'ldirish tavsiya etiladi.</p>
+    <a class="btn btn-small btn-secondary" href="{{ url_for('profile') }}">Profilni yangilash</a>
+  </article>
+</section>
+
+<section class="sub-block">
+  <div class="row-between">
+    <h2 class="mb-0">Bronlarim</h2>
+    <span class="theme-note">Bronlar 30 daqiqa ushlab turiladi. Vaqt tugasa joy avtomatik qaytadi.</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Reys #</th>
+          <th>Yo'nalish</th>
+          <th>Sana/Vaqt</th>
+          <th>Klass</th>
+          <th>Narx</th>
+          <th>Holat</th>
+          <th>Taymer</th>
+          <th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td>#{{ b.id }}</td>
+          <td>{{ b.route_code or '-' }}</td>
+          <td>{{ b.from_city }} → {{ b.to_city }}</td>
+          <td>{{ b.departure_date|date_dot }} {{ b.departure_time or '' }}</td>
+          <td>
+            {{ b.travel_class or 'Economy' }}
+            {% if b.baggage_option == 'premium' %}
+            <span class="badge badge-warn">Premium bagaj</span>
+            {% elif b.baggage_option == 'cabin_only' %}
+            <span class="badge">Bez bagaj</span>
+            {% else %}
+            <span class="badge">Bagaj bilan</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if (b.price_currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(b.price_value or 0) }} USD
+            {% else %}
+              {{ '{:,.0f}'.format(b.price_value or b.price_uzs) }} UZS
+            {% endif %}
+          </td>
+          <td>
+            {% if b.status == 'ticketed' %}
+              <span class="badge badge-success">Ticketed</span>
+            {% elif b.status == 'pending_payment' %}
+              <span class="badge badge-warn">Pending payment</span>
+            {% elif b.status == 'payment_review' %}
+              <span class="badge">Payment review</span>
+            {% elif b.status == 'payment_rejected' %}
+              <span class="badge badge-danger">Payment rejected</span>
+            {% elif b.status == 'expired' %}
+              <span class="badge badge-danger">Vaqti tugadi</span>
+            {% elif b.status == 'cancelled' %}
+              <span class="badge bg-danger">Bekor qilindi</span>
+            {% else %}
+              <span class="badge">{{ b.status }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if b.reservation_expires_at and b.status in ['pending_payment', 'payment_review', 'payment_rejected'] %}
+              <span class="reservation-countdown" data-reservation-expires="{{ b.reservation_expires_at }}" data-reservation-reload="1">00:00</span>
+            {% elif b.status == 'expired' %}
+              <span class="reservation-countdown is-expired">00:00</span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if b.status in ['pending_payment', 'payment_rejected'] %}
+              <a class="btn btn-small btn-secondary" href="{{ url_for('payment_upload', booking_id=b.id) }}">To'lov yuborish</a>
+              <form method="post" action="{{ url_for('cancel_booking', booking_id=b.id) }}" class="d-inline booking-cancel-form" data-cancel-booking-form>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input type="hidden" name="reason" value="" data-cancel-reason>
+                <button type="submit" class="btn btn-small btn-danger">Bekor qilish</button>
+              </form>
+            {% elif b.status == 'ticketed' and b.ticket_no %}
+              <a class="btn btn-small btn-primary" href="{{ url_for('download_ticket', ticket_no=b.ticket_no) }}">Ticket yuklash</a>
+            {% elif b.status == 'cancelled' %}
+              <span class="badge bg-danger">Bekor qilindi</span>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9">Hozircha bron mavjud emas. <a href="{{ url_for('search') }}">Qidiruvga o'tish</a>.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="sub-block">
+  <div class="row-between">
+    <h2>Hisob to'ldirish so'rovlari</h2>
+    <a class="btn btn-secondary" href="{{ url_for('wallet') }}">Yangi so'rov</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Summa</th>
+          <th>Usul</th>
+          <th>Holat</th>
+          <th>Sana</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in wallet_requests %}
+        <tr>
+          <td>#{{ w.id }}</td>
+          <td>
+            {% if (w.currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(w.amount_value or 0) }} USD
+            {% else %}
+              {{ '{:,.0f}'.format(w.amount_value or w.amount_uzs) }} UZS
+            {% endif %}
+          </td>
+          <td>{{ w.payment_method|upper }}</td>
+          <td>{{ w.status }}</td>
+          <td>{{ w.created_at }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5">Hozircha so'rov yuborilmagan.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

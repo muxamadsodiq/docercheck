@@ -1,0 +1,701 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Admin panel{% endblock %}
+
+{% block content %}
+{% set active_flights = managed_flights | selectattr('departure_date', 'ge', today_date) | list %}
+{% set past_flights = managed_flights | selectattr('departure_date', 'lt', today_date) | list %}
+{% if (flight_currency or 'ALL') != 'ALL' %}
+  {% set active_flights = active_flights | selectattr('price_currency', 'equalto', flight_currency) | list %}
+  {% set past_flights = past_flights | selectattr('price_currency', 'equalto', flight_currency) | list %}
+{% endif %}
+
+<section class="ticket-shell ticket-shell-spotlight glass-card admin-shell">
+  <div class="row-between">
+    <div>
+      <p class="eyebrow">ADMIN CONTROL</p>
+      <h1>{{ admin_page_title }}</h1>
+      <p class="lead">{{ admin_page_description }}</p>
+    </div>
+    <div class="row-inline">
+      <a href="{{ url_for('admin_analytics') }}" class="btn btn-primary">Analitika</a>
+      <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Admin markaz</a>
+      {% if session.get('is_super_admin') %}
+      <a href="{{ url_for('super_admin_panel') }}" class="btn btn-secondary">Super panel</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="admin-nav-grid">
+    {% for item in admin_nav %}
+      {% if item.slug != 'overview' %}
+      <a href="{{ item.href }}" class="admin-nav-card {% if admin_page == item.slug %}is-active{% endif %}">
+        <span class="summary-label">{{ item.title }}</span>
+        {% if item.count is not none %}
+        <strong>{{ item.count }}</strong>
+        {% else %}
+        <strong>Open</strong>
+        {% endif %}
+        <p>{{ item.description }}</p>
+      </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+{% if admin_page == 'overview' %}
+<section class="sub-block">
+  <div class="cards metrics">
+    <article class="card glass-card"><h3>Foydalanuvchilar</h3><p class="metric">{{ stats.users }}</p></article>
+    <article class="card glass-card"><h3>Reyslar</h3><p class="metric">{{ stats.flights }}</p></article>
+    <article class="card glass-card"><h3>Kutilayotgan to'lov</h3><p class="metric">{{ stats.payments_pending }}</p></article>
+    <article class="card glass-card"><h3>Wallet so'rov</h3><p class="metric">{{ stats.wallet_pending }}</p></article>
+    <article class="card glass-card"><h3>Ticketlar</h3><p class="metric">{{ stats.tickets }}</p></article>
+  </div>
+</section>
+
+<section class="sub-block">
+  <div class="row-between mb-4">
+    <h2 class="mb-0">Yangi bronlar preview</h2>
+    <a class="btn btn-secondary" href="{{ url_for('admin_bookings_page') }}">Hammasini ochish</a>
+  </div>
+  <div class="cards one-col">
+    {% for b in recent_bookings[:6] %}
+    <article class="card glass-card">
+      <h3>Booking #{{ b.booking_id }} | {{ b.full_name }} ({{ b.account_id }})</h3>
+      <p><strong>Yo'nalish:</strong> {{ b.from_city }}{% if b.from_airport_code %} ({{ b.from_airport_code }}){% endif %} → {{ b.to_city }}{% if b.to_airport_code %} ({{ b.to_airport_code }}){% endif %}</p>
+      <p><strong>Reys:</strong> {{ b.route_code or '-' }} | <strong>Sana/Vaqt:</strong> {{ b.departure_date }} {{ b.departure_time or '' }}</p>
+      <p><strong>Email:</strong> {{ b.email }} | <strong>Passport:</strong> {{ b.passport_number or '-' }}</p>
+    </article>
+    {% else %}
+    <article class="card glass-card"><p>Hozircha yangi bronlar yo'q.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'bookings' %}
+<section class="sub-block">
+  <div class="row-between mb-4">
+    <h2 class="mb-0">Yangi bronlar</h2>
+    <a class="btn btn-secondary" href="{{ url_for('admin_payments_page') }}">To'lovlar sahifasi</a>
+  </div>
+  <div class="cards one-col">
+    {% for b in recent_bookings %}
+    <article class="card glass-card">
+      <h3>Booking #{{ b.booking_id }} | {{ b.full_name }} ({{ b.account_id }})</h3>
+      <p><strong>Email:</strong> {{ b.email }}</p>
+      <p><strong>Passport:</strong> {{ b.passport_number or '-' }}</p>
+      <p><strong>Yo'nalish:</strong> {{ b.from_city }}{% if b.from_airport_code %} ({{ b.from_airport_code }}){% endif %} → {{ b.to_city }}{% if b.to_airport_code %} ({{ b.to_airport_code }}){% endif %}</p>
+      <p><strong>Reys:</strong> {{ b.route_code or '-' }} | <strong>Sana/Vaqt:</strong> {{ b.departure_date }} {{ b.departure_time or '' }} | <strong>Klass:</strong> {{ b.travel_class or 'Economy' }}</p>
+      <p><strong>Holat:</strong> {{ b.booking_status }} | <strong>Vaqt:</strong> {{ b.created_at }}</p>
+    </article>
+    {% else %}
+    <article class="card glass-card"><p>Hozircha yangi bronlar yo'q.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'new_flight' %}
+<section class="sub-block">
+  <h2>Yangi yo'nalish qo'shish</h2>
+  <form
+    class="panel form-grid flight-price-form glass-card"
+    method="post"
+    action="{{ url_for('admin_add_flight') }}"
+    id="admin-add-flight-form"
+    data-admin-flight-form
+    data-usd-rate="{{ usd_rate }}"
+  >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="next_page" value="new_flight" />
+    <label>Reys kodi
+      <input type="text" name="route_code" placeholder="Masalan: SF25001" />
+    </label>
+    <label>Qayerdan (kod yoki shahar)
+      <input type="text" name="from_airport" id="admin_from_airport" placeholder="TAS yoki Tashkent" required />
+      <small id="admin_from_suggestions" class="text-muted d-block mt-2" style="display: none;"></small>
+    </label>
+    <label>Qayerga (kod yoki shahar)
+      <input type="text" name="to_airport" id="admin_to_airport" placeholder="IST yoki Istanbul" required />
+      <small id="admin_to_suggestions" class="text-muted d-block mt-2" style="display: none;"></small>
+    </label>
+    <label>Uchish sanasi
+      <input type="date" name="departure_date" id="admin_departure_date" required min="{{ today_date }}" />
+    </label>
+    <label>Uchish vaqti
+      <input type="time" name="departure_time" />
+    </label>
+    <label>Qaytish sanasi
+      <input type="date" name="return_date" id="admin_return_date" min="{{ today_date }}" />
+    </label>
+    <label>Aviakompaniya
+      <input type="text" name="airline" placeholder="Turkish Airlines" required />
+    </label>
+    <label>Klass
+      <select name="travel_class">
+        <option value="Economy">Economy</option>
+        <option value="Business">Business</option>
+        <option value="First">First</option>
+      </select>
+    </label>
+    <label class="checkline">
+      <input type="checkbox" name="is_oneway" value="1" />
+      Bir tomonlama (one-way)
+    </label>
+    <label>Bagaj (kg)
+      <input type="number" name="baggage_kg" min="0" value="20" />
+    </label>
+    <label class="checkline">
+      <input type="checkbox" name="include_meal" value="1" checked />
+      Non/ovqat kiritiladi
+    </label>
+    <label class="checkline">
+      <input type="checkbox" name="include_return" value="1" checked />
+      Qaytish kiritiladi
+    </label>
+    <label>Narx
+      <input type="number" name="price_value" min="0.01" step="0.01" required />
+    </label>
+    <label>Valyuta
+      <select name="price_currency" required>
+        <option value="UZS">UZS</option>
+        <option value="USD">USD</option>
+      </select>
+      <small class="price-convert-hint text-muted d-block mt-2">1 USD = {{ '{:,.0f}'.format(usd_rate) }} UZS</small>
+    </label>
+    <label>Joy soni
+      <input type="number" name="seats" min="0" required />
+    </label>
+    <label>Status
+      <select name="status">
+        <option value="active">active</option>
+        <option value="inactive">inactive</option>
+      </select>
+    </label>
+    <button class="btn btn-primary" type="submit">Yo'nalishni qo'shish</button>
+  </form>
+</section>
+
+<section class="sub-block">
+  <h2>CSV/Excel import</h2>
+  <form class="panel form-grid glass-card" method="post" action="{{ url_for('admin_import_flights') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="next_page" value="new_flight" />
+    <p>Ustunlar: route_code, from_city, to_city, departure_date, return_date, airline, price_uzs, seats, status. Ixtiyoriy: from_airport_code, to_airport_code, departure_time, travel_class</p>
+    <label>Fayl tanlang
+      <input type="file" name="file" accept=".csv,.xlsx,.xls" required />
+    </label>
+    <button class="btn btn-primary" type="submit">Import qilish</button>
+  </form>
+</section>
+{% endif %}
+
+{% if admin_page == 'flights' %}
+<section class="sub-block">
+  <div class="row-between mb-4">
+    <h2 class="mb-0">Faol reyslar</h2>
+    <a class="btn btn-secondary" href="{{ url_for('admin_new_flight_page') }}">Reys qo'shish</a>
+  </div>
+  <form class="panel row-inline glass-card" method="get" action="{{ url_for('admin_flights_page') }}">
+    <label>Reys valyutasi
+      <select name="flight_currency">
+        <option value="ALL" {% if (flight_currency or 'ALL') == 'ALL' %}selected{% endif %}>Barchasi</option>
+        <option value="UZS" {% if (flight_currency or 'ALL') == 'UZS' %}selected{% endif %}>UZS</option>
+        <option value="USD" {% if (flight_currency or 'ALL') == 'USD' %}selected{% endif %}>USD</option>
+      </select>
+    </label>
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </form>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Reys #</th>
+          <th>Yo'nalish</th>
+          <th>Sana/Vaqt</th>
+          <th>Klass</th>
+          <th>Narx</th>
+          <th>Valyuta</th>
+          <th>Joy</th>
+          <th>Status</th>
+          <th>Bron/Ticket</th>
+          <th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in active_flights %}
+        <tr>
+          <td>#{{ f.id }}</td>
+          <td>{{ f.route_code or '-' }}</td>
+          <td>{{ f.from_city }} ({{ f.from_airport_code or '-' }}) → {{ f.to_city }} ({{ f.to_airport_code or '-' }})</td>
+          <td>{{ f.departure_date }} {{ f.departure_time or '' }}</td>
+          <td>{{ f.travel_class or 'Economy' }}</td>
+          <td>
+            {% if (f.price_currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(f.price_value or ((f.price_uzs / usd_rate) if usd_rate else 0)) }} USD<br><small>{{ '{:,.0f}'.format(f.price_uzs) }} UZS</small>
+            {% else %}
+              {{ '{:,.0f}'.format(f.price_value or f.price_uzs) }} UZS<br><small>{{ '%.2f'|format((f.price_uzs / usd_rate) if usd_rate else 0) }} USD</small>
+            {% endif %}
+          </td>
+          <td><span class="badge">{{ (f.price_currency or 'UZS') }}</span></td>
+          <td>{{ f.seats }}</td>
+          <td>{{ f.status }}</td>
+          <td>{{ f.bookings_total }}/{{ f.ticketed_total }}</td>
+          <td><a class="btn btn-small btn-primary" href="{{ url_for('admin_flight_detail', flight_id=f.id) }}">Yo'lovchilar</a></td>
+        </tr>
+        <tr>
+          <td colspan="11">
+            <form class="inline-form flight-price-form compact-flight-edit" data-base-uzs="{{ f.price_uzs }}" method="post" action="{{ url_for('admin_update_flight', flight_id=f.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="next_page" value="flights" />
+              <div class="edit-row edit-row-main">
+                <label>Reys #
+                  <input type="text" name="route_code" value="{{ f.route_code or '' }}" placeholder="Reys #" />
+                </label>
+                <label>Qayerdan
+                  <input type="text" name="from_airport" value="{{ f.from_airport_code or f.from_city }}" placeholder="Qayerdan" required />
+                </label>
+                <label>Qayerga
+                  <input type="text" name="to_airport" value="{{ f.to_airport_code or f.to_city }}" placeholder="Qayerga" required />
+                </label>
+                <label>Uchish sanasi
+                  <input type="date" name="departure_date" value="{{ f.departure_date }}" required min="{{ today_date }}" />
+                </label>
+                <label>Uchish vaqti
+                  <input type="time" name="departure_time" value="{{ f.departure_time or '' }}" />
+                </label>
+                <label>Qaytish sanasi
+                  <input type="date" name="return_date" value="{{ f.return_date or '' }}" min="{{ today_date }}" />
+                </label>
+                <label>Aviakompaniya
+                  <input type="text" name="airline" value="{{ f.airline }}" placeholder="Aviakompaniya" required />
+                </label>
+              </div>
+              <div class="edit-row edit-row-meta">
+                <label>Klass
+                  <select name="travel_class">
+                    <option value="Economy" {% if (f.travel_class or 'Economy') == 'Economy' %}selected{% endif %}>Economy</option>
+                    <option value="Business" {% if f.travel_class == 'Business' %}selected{% endif %}>Business</option>
+                    <option value="First" {% if f.travel_class == 'First' %}selected{% endif %}>First</option>
+                  </select>
+                </label>
+                <label>Narx
+                  <input type="number" name="price_value" min="0.01" step="0.01" value="{{ f.price_value or f.price_uzs }}" required />
+                </label>
+                <label>Valyuta
+                  <select name="price_currency">
+                    <option value="UZS" {% if (f.price_currency or 'UZS') == 'UZS' %}selected{% endif %}>UZS</option>
+                    <option value="USD" {% if (f.price_currency or 'UZS') == 'USD' %}selected{% endif %}>USD</option>
+                  </select>
+                </label>
+                <div class="price-convert-hint">1 USD = {{ '{:,.0f}'.format(usd_rate) }} UZS</div>
+                <label>Joy soni
+                  <input type="number" name="seats" min="0" value="{{ f.seats }}" required />
+                </label>
+                <label>Status
+                  <select name="status">
+                    <option value="active" {% if f.status == 'active' %}selected{% endif %}>active</option>
+                    <option value="inactive" {% if f.status == 'inactive' %}selected{% endif %}>inactive</option>
+                  </select>
+                </label>
+                <button class="btn btn-small btn-secondary" type="submit">Yangilash</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11">Faol reyslar topilmadi.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="sub-block">
+  <h2>Eski reyslar</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Reys #</th>
+          <th>Yo'nalish</th>
+          <th>Sana/Vaqt</th>
+          <th>Klass</th>
+          <th>Narx</th>
+          <th>Valyuta</th>
+          <th>Joy</th>
+          <th>Status</th>
+          <th>Bron/Ticket</th>
+          <th>Amal</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in past_flights %}
+        <tr>
+          <td>#{{ f.id }}</td>
+          <td>{{ f.route_code or '-' }}</td>
+          <td>{{ f.from_city }} ({{ f.from_airport_code or '-' }}) → {{ f.to_city }} ({{ f.to_airport_code or '-' }})</td>
+          <td>{{ f.departure_date }} {{ f.departure_time or '' }}</td>
+          <td>{{ f.travel_class or 'Economy' }}</td>
+          <td>
+            {% if (f.price_currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(f.price_value or ((f.price_uzs / usd_rate) if usd_rate else 0)) }} USD<br><small>{{ '{:,.0f}'.format(f.price_uzs) }} UZS</small>
+            {% else %}
+              {{ '{:,.0f}'.format(f.price_value or f.price_uzs) }} UZS<br><small>{{ '%.2f'|format((f.price_uzs / usd_rate) if usd_rate else 0) }} USD</small>
+            {% endif %}
+          </td>
+          <td><span class="badge">{{ (f.price_currency or 'UZS') }}</span></td>
+          <td>{{ f.seats }}</td>
+          <td>{{ f.status }}</td>
+          <td>{{ f.bookings_total }}/{{ f.ticketed_total }}</td>
+          <td><a class="btn btn-small btn-primary" href="{{ url_for('admin_flight_detail', flight_id=f.id) }}">Yo'lovchilar</a></td>
+        </tr>
+        <tr>
+          <td colspan="11">
+            <form class="inline-form flight-price-form compact-flight-edit" data-base-uzs="{{ f.price_uzs }}" method="post" action="{{ url_for('admin_update_flight', flight_id=f.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <input type="hidden" name="next_page" value="flights" />
+              <div class="edit-row edit-row-main">
+                <label>Reys #
+                  <input type="text" name="route_code" value="{{ f.route_code or '' }}" placeholder="Reys #" />
+                </label>
+                <label>Qayerdan
+                  <input type="text" name="from_airport" value="{{ f.from_airport_code or f.from_city }}" placeholder="Qayerdan" required />
+                </label>
+                <label>Qayerga
+                  <input type="text" name="to_airport" value="{{ f.to_airport_code or f.to_city }}" placeholder="Qayerga" required />
+                </label>
+                <label>Uchish sanasi
+                  <input type="date" name="departure_date" value="{{ f.departure_date }}" required min="{{ f.departure_date }}" />
+                </label>
+                <label>Uchish vaqti
+                  <input type="time" name="departure_time" value="{{ f.departure_time or '' }}" />
+                </label>
+                <label>Qaytish sanasi
+                  <input type="date" name="return_date" value="{{ f.return_date or '' }}" min="{{ f.departure_date }}" />
+                </label>
+                <label>Aviakompaniya
+                  <input type="text" name="airline" value="{{ f.airline }}" placeholder="Aviakompaniya" required />
+                </label>
+              </div>
+              <div class="edit-row edit-row-meta">
+                <label>Klass
+                  <select name="travel_class">
+                    <option value="Economy" {% if (f.travel_class or 'Economy') == 'Economy' %}selected{% endif %}>Economy</option>
+                    <option value="Business" {% if f.travel_class == 'Business' %}selected{% endif %}>Business</option>
+                    <option value="First" {% if f.travel_class == 'First' %}selected{% endif %}>First</option>
+                  </select>
+                </label>
+                <label>Narx
+                  <input type="number" name="price_value" min="0.01" step="0.01" value="{{ f.price_value or f.price_uzs }}" required />
+                </label>
+                <label>Valyuta
+                  <select name="price_currency">
+                    <option value="UZS" {% if (f.price_currency or 'UZS') == 'UZS' %}selected{% endif %}>UZS</option>
+                    <option value="USD" {% if (f.price_currency or 'UZS') == 'USD' %}selected{% endif %}>USD</option>
+                  </select>
+                </label>
+                <div class="price-convert-hint">1 USD = {{ '{:,.0f}'.format(usd_rate) }} UZS</div>
+                <label>Joy soni
+                  <input type="number" name="seats" min="0" value="{{ f.seats }}" required />
+                </label>
+                <label>Status
+                  <select name="status">
+                    <option value="active" {% if f.status == 'active' %}selected{% endif %}>active</option>
+                    <option value="inactive" {% if f.status == 'inactive' %}selected{% endif %}>inactive</option>
+                  </select>
+                </label>
+                <button class="btn btn-small btn-secondary" type="submit">Yangilash</button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11">Eski reyslar topilmadi.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'ticket_search' %}
+<section class="sub-block">
+  <h2>Ticket / passport / mijoz qidirish</h2>
+  <form class="panel row-inline glass-card" method="get" action="{{ url_for('admin_tickets_page') }}">
+    <input type="text" name="q" placeholder="Ticket, passport, ism, email, account id" value="{{ admin_query or '' }}" />
+    <button class="btn btn-secondary" type="submit">Qidirish</button>
+  </form>
+  {% if admin_search_results %}
+  <div class="cards one-col">
+    {% for result in admin_search_results %}
+    <article class="card glass-card">
+      <h3>{{ result.ticket_no }} | {{ result.full_name }}</h3>
+      <p><strong>Passport:</strong> {{ result.passport_number or '-' }} | <strong>Account:</strong> {{ result.account_id }}</p>
+      <p><strong>Email:</strong> {{ result.email }}</p>
+      <p><strong>Yo'nalish:</strong> {{ result.from_city }}{% if result.from_airport_code %} ({{ result.from_airport_code }}){% endif %} → {{ result.to_city }}{% if result.to_airport_code %} ({{ result.to_airport_code }}){% endif %}</p>
+      <p><strong>Reys #:</strong> {{ result.route_code or '-' }} | <strong>Sana/Vaqt:</strong> {{ result.departure_date }} {{ result.departure_time or '' }}</p>
+      <p><strong>Klass:</strong> {{ result.travel_class or 'Economy' }} | <strong>Aviakompaniya:</strong> {{ result.airline }}</p>
+      <a class="btn btn-primary" href="{{ url_for('download_ticket', ticket_no=result.ticket_no) }}">PDF ochish</a>
+    </article>
+    {% endfor %}
+  </div>
+  {% elif admin_query %}
+  <article class="card glass-card"><p>Natija topilmadi.</p></article>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if admin_page == 'users' %}
+<section class="sub-block">
+  <div class="row-between mb-4">
+    <h2 class="mb-0">Mijozlar ro'yxati</h2>
+    <form class="panel row-inline glass-card admin-inline-search" method="get" action="{{ url_for('admin_users_page') }}">
+      <input type="text" name="user_q" placeholder="Ism, email, telefon yoki ID" value="{{ users_query or '' }}" />
+      <button class="btn btn-secondary" type="submit">Qidirish</button>
+    </form>
+  </div>
+  <div class="cards one-col">
+    {% for account in account_overview %}
+    <article class="card glass-card">
+      <div class="row-between">
+        <div>
+          <h3>{{ account.full_name }} ({{ account.account_id }})</h3>
+          <p><strong>Email:</strong> {{ account.email }}</p>
+          <p><strong>Telefon:</strong> {{ account.phone or '-' }} | <strong>Passport:</strong> {{ account.passport_number or '-' }}</p>
+        </div>
+        <div class="badge-row">
+          <span class="badge">UZS: {{ '{:,.0f}'.format(account.balance_uzs or 0) }}</span>
+          <span class="badge">USD: {{ '%.2f'|format(account.balance_usd or 0) }}</span>
+          <span class="badge">Bron: {{ account.bookings_total }}</span>
+          <span class="badge">Ticket: {{ account.ticketed_total }}</span>
+        </div>
+      </div>
+      <div class="detail-grid mt-3">
+        <div><strong>Wallet harakati:</strong> {{ account.wallet_requests_total }}</div>
+        <div><strong>Oxirgi activity:</strong> {{ account.last_wallet_activity or '-' }}</div>
+      </div>
+      <div class="row-inline mt-3">
+        <a class="btn btn-primary" href="{{ url_for('admin_user_detail', user_id=account.id) }}">Profilni ochish</a>
+        <a class="btn btn-secondary" href="{{ url_for('admin_accounts_page') }}">Balans bo'limi</a>
+      </div>
+    </article>
+    {% else %}
+    <article class="card glass-card"><p>Hozircha foydalanuvchilar topilmadi.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'accounts' %}
+<section class="sub-block">
+  <h2>Akkuntlar markazi</h2>
+  <form class="panel form-grid glass-card" method="post" action="{{ url_for('admin_add_balance') }}" data-account-lookup-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <input type="hidden" name="next_page" value="accounts" />
+    <label>Account ID
+      <input type="text" name="account_id" placeholder="Masalan: A0001" required data-account-lookup-input data-account-lookup-endpoint="{{ url_for('admin_account_lookup') }}" />
+    </label>
+    <label>Valyuta
+      <select name="currency" required>
+        <option value="UZS">UZS</option>
+        <option value="USD">USD</option>
+      </select>
+    </label>
+    <label>Summa
+      <input type="number" name="amount" min="0.01" step="0.01" required />
+    </label>
+    <label>Amal
+      <select name="operation" required>
+        <option value="add">Qo'shish</option>
+        <option value="subtract">Ayirish</option>
+      </select>
+    </label>
+    <label>Izoh
+      <input type="text" name="admin_note" placeholder="Masalan: bonus, correction, manual topup" />
+    </label>
+    <div class="account-owner-preview" data-account-lookup-preview hidden>
+      <strong data-account-owner-name>ID egasi topilmadi</strong>
+      <span data-account-owner-meta>Account ma'lumoti shu yerda chiqadi.</span>
+    </div>
+    <button class="btn btn-primary" type="submit">Balansni yangilash</button>
+  </form>
+</section>
+
+{% if balance_receipt %}
+<section class="sub-block" id="receipt-{{ balance_receipt.id }}">
+  <article class="panel glass-card receipt-card">
+    <p class="eyebrow">BALANCE RECEIPT</p>
+    <h2>{{ balance_receipt.full_name }} ({{ balance_receipt.account_id }})</h2>
+    <p class="lead">Balans amaliyoti muvaffaqiyatli yozildi va wallet tarixiga tushdi.</p>
+    <div class="detail-grid mt-3">
+      <div><strong>Chek #</strong><br />{{ balance_receipt.id }}</div>
+      <div><strong>Valyuta</strong><br />{{ balance_receipt.currency }}</div>
+      <div><strong>Miqdor</strong><br />
+        {% if (balance_receipt.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(balance_receipt.amount_value or 0) }} USD
+        {% else %}
+          {{ '{:,.0f}'.format(balance_receipt.amount_value or balance_receipt.amount_uzs or 0) }} UZS
+        {% endif %}
+      </div>
+      <div><strong>Vaqt</strong><br />{{ balance_receipt.reviewed_at or balance_receipt.created_at }}</div>
+    </div>
+    <p class="mt-3"><strong>Admin izohi:</strong> {{ balance_receipt.admin_note or balance_receipt.note or 'Izoh kiritilmagan' }}</p>
+  </article>
+</section>
+{% endif %}
+
+<section class="sub-block">
+  <div class="cards one-col">
+    {% for account in account_overview %}
+    <article class="card glass-card">
+      <div class="row-between">
+        <div>
+          <h3>{{ account.full_name }} ({{ account.account_id }})</h3>
+          <p><strong>Email:</strong> {{ account.email }}</p>
+          <p><strong>Telefon:</strong> {{ account.phone or '-' }}</p>
+        </div>
+        <div class="badge-row">
+          <span class="badge">UZS: {{ '{:,.0f}'.format(account.balance_uzs or 0) }}</span>
+          <span class="badge">USD: {{ '%.2f'|format(account.balance_usd or 0) }}</span>
+          <span class="badge">Bron: {{ account.bookings_total }}</span>
+          <span class="badge">Ticket: {{ account.ticketed_total }}</span>
+        </div>
+      </div>
+      <div class="detail-grid mt-3">
+        <div><strong>Wallet harakati:</strong> {{ account.wallet_requests_total }}</div>
+        <div><strong>Oxirgi activity:</strong> {{ account.last_wallet_activity or '-' }}</div>
+      </div>
+      <div class="row-inline mt-3">
+        <a class="btn btn-secondary" href="{{ url_for('admin_user_detail', user_id=account.id) }}">User kartasi</a>
+      </div>
+      <form class="form-grid mt-3" method="post" action="{{ url_for('admin_add_balance') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="next_page" value="accounts" />
+        <input type="hidden" name="account_id" value="{{ account.account_id }}" />
+        <div class="detail-grid">
+          <label>Valyuta
+            <select name="currency" required>
+              <option value="UZS">UZS</option>
+              <option value="USD">USD</option>
+            </select>
+          </label>
+          <label>Summa
+            <input type="number" name="amount" min="0.01" step="0.01" placeholder="Masalan: 500000 yoki 50" required />
+          </label>
+          <label style="grid-column: 1 / -1;">Izoh
+            <input type="text" name="admin_note" placeholder="Masalan: correction, refund, bonus, debit" />
+          </label>
+        </div>
+        <div class="row-inline">
+          <button class="btn btn-primary" type="submit" name="operation" value="add">Pul qo'shish</button>
+          <button class="btn btn-danger" type="submit" name="operation" value="subtract">Pul ayirish</button>
+        </div>
+      </form>
+    </article>
+    {% else %}
+    <article class="card glass-card"><p>Hozircha foydalanuvchi accountlari topilmadi.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'wallet_requests' %}
+<section class="sub-block">
+  <h2>Hisob to'ldirish so'rovlari</h2>
+  <form class="panel row-inline glass-card" method="get" action="{{ url_for('admin_requests_page') }}">
+    <label>Holat
+      <select name="wallet_status">
+        <option value="pending" {% if wallet_status == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="approved" {% if wallet_status == 'approved' %}selected{% endif %}>Approved</option>
+        <option value="rejected" {% if wallet_status == 'rejected' %}selected{% endif %}>Rejected</option>
+        <option value="all" {% if wallet_status == 'all' %}selected{% endif %}>Barchasi</option>
+      </select>
+    </label>
+    <button class="btn btn-secondary" type="submit">Filter</button>
+  </form>
+  <div class="cards one-col">
+    {% for w in wallet_requests %}
+    <article class="card glass-card">
+      <h3>So'rov #{{ w.id }} | {{ w.full_name }} ({{ w.account_id }})</h3>
+      <p><strong>Email:</strong> {{ w.email }}</p>
+      <p><strong>Usul:</strong> {{ w.payment_method|upper }} | <strong>Summa:</strong>
+        {% if (w.currency or 'UZS') == 'USD' %}
+          {{ '%.2f'|format(w.amount_value or 0) }} USD ({{ '{:,.0f}'.format(w.amount_uzs or 0) }} UZS)
+        {% else %}
+          {{ '{:,.0f}'.format(w.amount_value or w.amount_uzs) }} UZS ({{ '%.2f'|format(((w.amount_uzs or 0) / usd_rate) if usd_rate else 0) }} USD)
+        {% endif %}
+      </p>
+      <p><strong>Holat:</strong> {{ (w.status or 'pending')|upper }}</p>
+      <p><strong>Izoh:</strong> {{ w.note or '-' }}</p>
+      {% if (w.status or 'pending') == 'pending' %}
+      <form class="form-grid" method="post" action="{{ url_for('admin_review_wallet', request_id=w.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="next_page" value="wallet_requests" />
+        <label>Admin izohi
+          <input type="text" name="admin_note" placeholder="Izoh (ixtiyoriy)" />
+        </label>
+        <div class="row-inline">
+          <button class="btn btn-primary" type="submit" name="action" value="approve">Tasdiqlash</button>
+          <button class="btn btn-danger" type="submit" name="action" value="reject">Rad etish</button>
+        </div>
+      </form>
+      {% endif %}
+    </article>
+    {% else %}
+    <article class="card glass-card"><p>Hozircha wallet so'rovlari yo'q.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if admin_page == 'payment_reviews' %}
+<section class="sub-block">
+  <h2>To'lov tekshiruvlari</h2>
+  <div class="cards one-col">
+    {% for p in pending %}
+    <article class="card glass-card">
+      <div class="row-between">
+        <div>
+          <h3>Booking #{{ p.booking_id }} | {{ p.from_city }} → {{ p.to_city }}</h3>
+          <p><strong>Reys #:</strong> {{ p.route_code or '-' }} | <strong>Sana/Vaqt:</strong> {{ p.departure_date }} {{ p.departure_time or '' }} | <strong>Klass:</strong> {{ p.travel_class or 'Economy' }}</p>
+          <p><strong>Aeroport:</strong> {{ p.from_airport_code or '-' }} → {{ p.to_airport_code or '-' }}</p>
+          <p><strong>Mijoz:</strong> {{ p.full_name }} | {{ p.account_id }} | {{ p.email }}</p>
+          <p><strong>Passport:</strong> {{ p.passport_number or '-' }} | <strong>Millat:</strong> {{ p.nationality or '-' }}</p>
+          <p><strong>Summa:</strong>
+            {% if (p.currency or 'UZS') == 'USD' %}
+              {{ '%.2f'|format(p.amount_value or 0) }} USD
+            {% else %}
+              {{ '{:,.0f}'.format(p.amount_value or p.amount_uzs) }} UZS
+            {% endif %}
+          </p>
+          <p><strong>To'lov usuli:</strong> {{ (p.payment_method or 'manual')|upper }} | <strong>Reference:</strong> {{ p.payment_reference or '-' }}</p>
+          {% if p.proof_image %}
+          <p><a target="_blank" rel="noreferrer" href="{{ url_for('static', filename=p.proof_image) }}">Chek rasmini ko'rish</a></p>
+          {% else %}
+          <p>Chek rasmi yo'q (online yoki wallet oqimi bo'lishi mumkin).</p>
+          {% endif %}
+        </div>
+      </div>
+      <form class="form-grid" method="post" action="{{ url_for('admin_review_payment', payment_id=p.payment_id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="next_page" value="payment_reviews" />
+        <label>Admin izohi
+          <input type="text" name="admin_note" placeholder="Izoh (ixtiyoriy)" />
+        </label>
+        <div class="row-inline">
+          <button class="btn btn-primary" type="submit" name="action" value="approve">Tasdiqlash + ticket yaratish</button>
+          <button class="btn btn-danger" type="submit" name="action" value="reject">Rad etish</button>
+        </div>
+      </form>
+    </article>
+    {% else %}
+    <article class="card glass-card"><p>Hozircha tekshiruvga kelgan to'lovlar yo'q.</p></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

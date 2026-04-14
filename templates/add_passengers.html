@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Yo'lovchilar ma'lumoti{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <section class="ticket-shell ticket-shell-spotlight glass-card">
+    <p class="eyebrow">PASSENGER DETAILS</p>
+    <h1>Yo'lovchilar ma'lumoti</h1>
+    <p class="lead">Bu bosqichda guruh uchun bitta aloqa raqami va bitta Gmail olinadi, yo'lovchilar uchun esa passportdagi to'liq ism-familiya va hujjat ma'lumotlari kiritiladi. Yosh kategoriyasi parvoz sanasiga ko'ra avtomatik INF, CHD yoki ADT sifatida hisoblanadi.</p>
+
+    <div class="cards one-col" style="margin-top: 18px;">
+      <article class="card glass-card">
+        <p><strong>Bron raqami:</strong> #{{ booking.id }}</p>
+        <p><strong>Yo'lovchilar soni:</strong> {{ booking.passenger_count }}</p>
+        <p><strong>Bagaj:</strong> {% if booking.baggage_option == 'premium' %}Premium (+25%){% else %}Standart{% endif %}</p>
+        <p><strong>Yo'nalish:</strong> {{ booking.from_city }} → {{ booking.to_city }}</p>
+      </article>
+    </div>
+
+    {% if booking.reservation_expires_at %}
+    <div class="summary-grid compact mt-4">
+      <article class="summary-card reservation-card" data-reservation-expires="{{ booking.reservation_expires_at }}" data-reservation-reload="1">
+        <span class="summary-label">Bron saqlash vaqti</span>
+        <strong class="reservation-countdown">00:00</strong>
+      </article>
+      <article class="summary-card">
+        <span class="summary-label">Holat</span>
+        <strong>Joylar 30 daqiqa band</strong>
+      </article>
+    </div>
+    {% endif %}
+  </section>
+
+  <aside class="panel glass-card">
+    <h3>Nima qayerda so'raladi?</h3>
+    <ul>
+      <li>Bu sahifada: guruh uchun bitta aloqa Gmail/telefon va har yo'lovchi passport ma'lumoti olinadi</li>
+      <li>Profil sahifasi: birinchi yo'lovchi uchun qulay auto-fill manbasi bo'lib turadi</li>
+      <li>Ticket bitta PDF bo'lib aynan shu yerda kiritilgan Gmail manzilga yuboriladi</li>
+    </ul>
+    <div class="row-inline mt-3">
+      <a href="{{ url_for('profile', next=url_for('add_passengers', booking_id=booking.id)) }}" class="btn btn-secondary">Profilni ko'rish</a>
+    </div>
+  </aside>
+</div>
+
+<form method="POST" class="panel form-grid glass-card" style="margin-top: 24px;" data-passenger-form data-flight-date="{{ booking.departure_date }}" data-expected-adt="{{ booking.adult_count or 0 }}" data-expected-chd="{{ booking.child_count or 0 }}" data-expected-inf="{{ booking.infant_count or 0 }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+  <article class="card glass-card">
+    <h3 class="mb-2">Guruh uchun aloqa ma'lumoti</h3>
+    <div class="detail-grid">
+      <label>Telefon raqam
+        <input
+          type="tel"
+          name="group_phone"
+          value="{{ group_contact.phone if group_contact else '' }}"
+          placeholder="+998901234567"
+          inputmode="tel"
+          autocomplete="tel"
+          pattern="^\+?\d{9,15}$"
+          required
+        />
+      </label>
+
+      <label>Ticket yuboriladigan Gmail
+        <input
+          type="email"
+          name="group_notification_email"
+          value="{{ group_contact.notification_email if group_contact else '' }}"
+          placeholder="example@gmail.com"
+          autocomplete="email"
+          inputmode="email"
+          required
+        />
+      </label>
+    </div>
+    <p class="theme-note mb-0">Guruh broni uchun bitta telefon va bitta Gmail yetarli. Shu Gmail manzilga barcha yo'lovchilar ro'yxati tushirilgan bitta PDF ticket yuboriladi.</p>
+  </article>
+
+  {% for i in range(1, booking.passenger_count + 1) %}
+  {% set pax = existing_passengers[i-1] if existing_passengers and (existing_passengers|length) >= i else {} %}
+  <article class="card glass-card" data-passenger-card>
+    <h3 class="mb-2">Yo'lovchi {{ i }}</h3>
+    <div class="stack-grid">
+      <section class="field-cluster">
+        <div class="cluster-head">
+          <h4 class="cluster-title">Passport va safar ma'lumoti</h4>
+          <p class="cluster-note">Ma'lumotlar passportdagi yozuv bilan bir xil bo'lishi kerak. Sana kiritishda nuqtali format ishlatiladi: DD.MM.YYYY.</p>
+        </div>
+        <div class="detail-grid">
+          <label>Ism
+            <input
+              type="text"
+              name="passenger_{{ i }}_first_name"
+              value="{{ pax.get('first_name', '') }}"
+              placeholder="Abdulla"
+              autocomplete="given-name"
+              required
+              minlength="2"
+              maxlength="100"
+            />
+          </label>
+
+          <label>Familiya
+            <input
+              type="text"
+              name="passenger_{{ i }}_last_name"
+              value="{{ pax.get('last_name', '') }}"
+              placeholder="Azimov"
+              autocomplete="family-name"
+              required
+              minlength="2"
+              maxlength="100"
+            />
+          </label>
+
+          <label>Passport raqami
+            <input type="text" name="passenger_{{ i }}_passport_number" value="{{ pax.get('passport_number', '') }}" placeholder="AA1234567" required />
+          </label>
+
+          <label>Passport seriyasi
+            <input type="text" name="passenger_{{ i }}_passport_series" value="{{ pax.get('passport_series', '') }}" placeholder="AA" maxlength="2" required />
+          </label>
+
+          <label>Tug'ilgan sana
+            <input type="date" name="passenger_{{ i }}_birth_date" value="{{ pax.get('birth_date', '') }}" max="{{ today_date }}" data-passenger-birth required />
+          </label>
+
+          <label>Yosh kategoriyasi (avtomatik)
+            <input
+              type="text"
+              value="{{ pax.get('passenger_type_label', '-') }}"
+              data-passenger-type-display
+              readonly
+              tabindex="-1"
+              aria-readonly="true"
+            />
+            <input type="hidden" name="passenger_{{ i }}_passenger_type" value="{{ pax.get('passenger_type', '') }}" data-passenger-type-input />
+          </label>
+          <p class="cluster-note mb-0">Bu maydon tug'ilgan sana bo'yicha avtomatik to'ladi va qo'lda tahrir qilinmaydi.</p>
+
+          <label>Jins
+            <select name="passenger_{{ i }}_gender" required>
+              <option value="">Tanlang</option>
+              <option value="male" {% if pax.get('gender', '') == 'male' %}selected{% endif %}>Erkak</option>
+              <option value="female" {% if pax.get('gender', '') == 'female' %}selected{% endif %}>Ayol</option>
+            </select>
+          </label>
+
+          <label>Millat / Fuqarolik
+            <input type="text" name="passenger_{{ i }}_nationality" value="{{ pax.get('nationality', '') }}" placeholder="Uzbek" required />
+          </label>
+
+          <label>Passport berilgan sana
+            <input type="date" name="passenger_{{ i }}_passport_issue_date" value="{{ pax.get('passport_issue_date', '') }}" min="{{ ten_years_ago_date }}" max="{{ today_date }}" data-passenger-issue required />
+          </label>
+
+          <label>Passport tugash sanasi
+            <input type="date" name="passenger_{{ i }}_passport_expiration_date" value="{{ pax.get('passport_expiration_date', '') }}" min="{{ passport_expiration_min_date }}" data-passenger-expiration required />
+          </label>
+        </div>
+      </section>
+    </div>
+  </article>
+  {% endfor %}
+
+  <div class="row-inline">
+    <button type="submit" class="btn btn-primary">Davom etish → To'lov</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-nav">Bekor qilish</a>
+  </div>
+</form>
+{% endblock %}

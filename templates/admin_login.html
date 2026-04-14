@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Admin kirish{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <form class="panel auth-form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <h1>Admin login</h1>
+    <label>Email
+      <input type="email" name="email" required />
+    </label>
+    <label>Parol
+      <input type="password" name="password" required />
+    </label>
+    <button class="btn btn-primary" type="submit">Kirish</button>
+  </form>
+</div>
+{% endblock %}

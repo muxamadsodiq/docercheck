@@ -1,0 +1,4 @@
+route_code,from_city,from_airport_code,to_city,to_airport_code,departure_date,return_date,airline,price_uzs,seats,status
+SF24001,Tashkent,TAS,Istanbul,IST,2026-05-12,2026-05-20,Turkish Airlines,4200000,7,active
+SF24002,Tashkent,TAS,Seoul,ICN,2026-05-15,2026-05-28,Asiana,6900000,5,active
+SF24003,Tashkent,TAS,Dubai,DXB,2026-05-18,2026-05-25,Flydubai,3600000,9,active

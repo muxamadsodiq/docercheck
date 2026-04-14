@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Bron qilish{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+    <section class="ticket-shell glass-card">
+        <p class="eyebrow">BRON OYNASI</p>
+        <h1>{{ flight.from_city }} → {{ flight.to_city }}</h1>
+        <p class="lead">
+            Reys raqami <strong>{{ flight.route_code or '-' }}</strong>.
+            {{ flight.departure_date|date_dot }} {{ flight.departure_time or '' }}.
+            {{ flight.travel_class or 'Economy' }} klass, {{ flight.seats }} ta joy qoldi.
+        </p>
+
+        <div class="cards one-col" style="margin-top: 18px;">
+            <article class="card glass-card">
+                <div class="row-between">
+                    <div>
+                        <h3>{{ flight.airline }}</h3>
+                        <p><strong>Aeroport:</strong> {{ flight.from_airport_code or '-' }} → {{ flight.to_airport_code or '-' }}</p>
+                        <p><strong>Bagaj:</strong> {{ flight.baggage_kg }} kg | <strong>Meal:</strong> {{ "Ha" if flight.include_meal else "Yo'q" }}</p>
+                    </div>
+                    <div>
+                        <p class="eyebrow" style="margin-bottom: 6px;">Narx</p>
+                        <div class="price">
+                            {% set sale_currency = (flight.price_currency or 'UZS') %}
+                            {% set sale_price = (flight.price_value if flight.price_value is not none else flight.price_uzs) %}
+                            {% if sale_currency == 'USD' %}
+                                {{ '%.2f'|format(sale_price) }} USD
+                            {% else %}
+                                {{ '{:,.0f}'.format(sale_price) }} UZS
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <aside class="panel glass-card">
+        <h3>Tezkor ma'lumot</h3>
+        <p class="theme-note">Bron bosqichida yo'lovchilar soni va bagaj turi tanlanadi. Guruh broni uchun keyingi sahifada bitta aloqa Gmail/telefon va barcha yo'lovchilar ro'yxati kiritiladi.</p>
+        <div class="badge" style="margin-bottom: 10px;">Qoldiq joy: {{ flight.seats }}</div>
+        <div class="badge" style="margin-bottom: 10px;">Klass: {{ flight.travel_class or 'Economy' }}</div>
+        <div class="badge">Reys: {{ flight.route_code or '-' }}</div>
+    </aside>
+</div>
+
+{% set default_adult = booking_defaults.adult_count if booking_defaults else 1 %}
+{% set default_child = booking_defaults.child_count if booking_defaults else 0 %}
+{% set default_infant = booking_defaults.infant_count if booking_defaults else 0 %}
+{% set selected_baggage = request.form.get('baggage_option', 'standard') %}
+
+<form
+    method="POST"
+    class="panel form-grid booking-form glass-card"
+    style="margin-top: 24px;"
+    data-booking-pricing
+    data-sale-currency="{{ flight.price_currency or 'UZS' }}"
+    data-base-price="{{ flight.price_value if flight.price_value is not none else flight.price_uzs }}"
+    data-fare-adt="{{ fare_ratio.ADT }}"
+    data-fare-chd="{{ fare_ratio.CHD }}"
+    data-fare-inf="{{ fare_ratio.INF }}"
+    data-max-travelers="{{ max_booking_travelers }}"
+>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <div class="row-between">
+        <h2 style="margin: 0;">Bron qilish formasi</h2>
+        <a href="{{ url_for('search') }}" class="btn btn-nav">Qidiruvga qaytish</a>
+    </div>
+
+    <div class="cards booking-passenger-cards" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <label class="booking-passenger-field">Yo'lovchi tarkibi
+            <div class="passenger-picker booking-passenger-picker" data-booking-passenger-picker>
+                <input
+                    type="hidden"
+                    id="adult_count"
+                    name="adult_count"
+                    value="{{ default_adult }}"
+                    data-passenger-hidden="adult"
+                />
+                <input
+                    type="hidden"
+                    id="child_count"
+                    name="child_count"
+                    value="{{ default_child }}"
+                    data-passenger-hidden="child"
+                />
+                <input
+                    type="hidden"
+                    id="infant_count"
+                    name="infant_count"
+                    value="{{ default_infant }}"
+                    data-passenger-hidden="infant"
+                />
+
+                <button
+                    type="button"
+                    class="passenger-picker-trigger"
+                    data-passenger-trigger
+                    aria-expanded="false"
+                    aria-haspopup="true"
+                >
+                    <span class="passenger-picker-summary" data-passenger-summary>
+                        {{ default_adult + default_child + default_infant }} yo'lovchi • ADT {{ default_adult }} • CHD {{ default_child }} • INF {{ default_infant }}
+                    </span>
+                    <span class="passenger-picker-chevron" aria-hidden="true">▾</span>
+                </button>
+
+                <div class="passenger-picker-panel" data-passenger-panel hidden>
+                    <div class="passenger-picker-row">
+                        <div class="passenger-picker-label">
+                            <strong>ADT</strong>
+                            <span>12+</span>
+                        </div>
+                        <div class="passenger-picker-stepper">
+                            <button type="button" data-passenger-action="decrement" data-passenger-target="adult" aria-label="ADT kamaytirish">−</button>
+                            <span data-passenger-value="adult">{{ default_adult }}</span>
+                            <button type="button" data-passenger-action="increment" data-passenger-target="adult" aria-label="ADT oshirish">+</button>
+                        </div>
+                    </div>
+
+                    <div class="passenger-picker-row">
+                        <div class="passenger-picker-label">
+                            <strong>CHD</strong>
+                            <span>2-12</span>
+                        </div>
+                        <div class="passenger-picker-stepper">
+                            <button type="button" data-passenger-action="decrement" data-passenger-target="child" aria-label="CHD kamaytirish">−</button>
+                            <span data-passenger-value="child">{{ default_child }}</span>
+                            <button type="button" data-passenger-action="increment" data-passenger-target="child" aria-label="CHD oshirish">+</button>
+                        </div>
+                    </div>
+
+                    <div class="passenger-picker-row">
+                        <div class="passenger-picker-label">
+                            <strong>INF</strong>
+                            <span>0-2</span>
+                        </div>
+                        <div class="passenger-picker-stepper">
+                            <button type="button" data-passenger-action="decrement" data-passenger-target="infant" aria-label="INF kamaytirish">−</button>
+                            <span data-passenger-value="infant">{{ default_infant }}</span>
+                            <button type="button" data-passenger-action="increment" data-passenger-target="infant" aria-label="INF oshirish">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </label>
+
+        <label>Bagaj turi
+            <select id="baggage_option" name="baggage_option" required>
+                <option value="cabin_only" {% if selected_baggage == 'cabin_only' %}selected{% endif %}>Bez bagaj (-10%)</option>
+                <option value="standard" {% if selected_baggage == 'standard' %}selected{% endif %}>Bagaj bilan (standart)</option>
+                <option value="premium" {% if selected_baggage == 'premium' %}selected{% endif %}>Premium bagaj (+25%)</option>
+            </select>
+        </label>
+    </div>
+
+    <p class="theme-note" style="margin: 0;">Yosh kategoriyasi tug'ilgan sana bilan tekshiriladi: INF (0-2), CHD (2-12), ADT (12+). Har bir INF uchun kamida bitta ADT bo'lishi shart.</p>
+    <p class="theme-note" style="margin: 10px 0 0;">Bron yaratilgach joylar 30 daqiqa ushlab turiladi. INF odatda o'rindiqsiz hisoblanadi, shuning uchun joy hisobida ADT+CHD olinadi.</p>
+
+    <article class="card glass-card" style="margin-top: 8px;">
+        <h3>Jarayon</h3>
+        <ol style="margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Bron yaratish</li>
+            <li>Guruh aloqa ma'lumoti va yo'lovchilar ro'yxatini kiritish</li>
+            <li>Ma'lumotlarni tekshirish va to'lov</li>
+            <li>Guruh ticket PDF yaratish</li>
+            <li>Bitta Gmail'ga yuborish</li>
+        </ol>
+    </article>
+
+    <article class="card glass-card" style="margin-top: 8px;">
+        <h3>Bagaj variantlari</h3>
+        <div class="badge-row">
+            <span class="badge">Bez bagaj: -10%</span>
+            <span class="badge">Standart: {{ flight.baggage_kg }} kg</span>
+            <span class="badge badge-warn">Premium: {{ flight.baggage_kg + 10 }} kg</span>
+        </div>
+    </article>
+
+    <article class="card glass-card" style="margin-top: 8px;">
+        <h3>Yosh kategoriyasi tariflari</h3>
+        <div class="badge-row">
+            <span class="badge">ADT (12+): {{ (fare_ratio.ADT * 100)|round(0)|int }}%</span>
+            <span class="badge">CHD (2-12): {{ (fare_ratio.CHD * 100)|round(0)|int }}%</span>
+            <span class="badge">INF (0-2): {{ (fare_ratio.INF * 100)|round(0)|int }}%</span>
+        </div>
+    </article>
+
+    <div class="ticket-shell glass-card" style="padding: 18px;">
+        <div class="row-between">
+            <div>
+                <p class="eyebrow">NARX HISOBI</p>
+                <p><strong>ADT (12+) birligi:</strong> <span data-adult-unit></span> <span data-currency-label></span></p>
+                <p><strong>CHD (2-12) birligi:</strong> <span data-child-unit></span> <span data-currency-label></span></p>
+                <p><strong>INF (0-2) birligi:</strong> <span data-infant-unit></span> <span data-currency-label></span></p>
+                <p><strong>Yo'lovchi tarkibi:</strong> <span data-age-mix>ADT 1 • CHD 0 • INF 0</span></p>
+                <p><strong>Jami yo'lovchi:</strong> <span data-passenger-total>1</span> | <strong>Band o'rindiq:</strong> <span data-seat-total>1</span></p>
+            </div>
+            <div style="text-align: right;">
+                <p class="eyebrow">BAZA JAMI</p>
+                <h2 style="margin: 0; color: var(--accent-2);"><span data-total-price></span> <span data-currency-total></span></h2>
+                <p class="theme-note" style="margin-top: 8px;">Click/Payme foizi to'lov bosqichida qo'shiladi.</p>
+            </div>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%;">Davom etish → Yo'lovchi ma'lumoti</button>
+</form>
+{% endblock %}

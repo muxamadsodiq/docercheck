@@ -1,0 +1,33 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environment
+.venv/
+venv/
+.env
+
+# Git
+.git
+.gitignore
+
+# Local DB and uploads (mount as volumes instead)
+safar24.db
+static/uploads/
+static/tickets/
+
+# Editor configs
+.vscode/
+.idea/
+
+# Build & test
+node_modules/
+.pytest_cache/
+*.log
+
+# CI
+.github/
+
+.DS_Store

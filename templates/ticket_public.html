@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Safar24 | Ticket tekshiruv{% endblock %}
+
+{% block content %}
+<div class="hero-grid">
+  <section class="ticket-shell ticket-shell-spotlight">
+    <p class="eyebrow">TICKET VERIFICATION</p>
+    <h1>Ticket ma'lumoti</h1>
+    <p class="lead">QR yoki havola orqali tekshirildi. Quyidagi ma'lumotlar rezervatsiya bilan mos keladi va Safar24 tizimidagi ticket holatini ko'rsatadi.</p>
+  </section>
+
+  <aside class="panel glass-card">
+    <h3>Ticket #{{ t.ticket_no }}</h3>
+    <p><strong>Asosiy yo'lovchi:</strong> {{ t.full_name }}</p>
+    <p><strong>Yaratilgan:</strong> {{ t.created_at }}</p>
+    <div class="badge-row mt-3">
+      <span class="badge badge-success">Tasdiqlangan</span>
+      <span class="badge">{{ t.travel_class or 'Economy' }}</span>
+    </div>
+  </aside>
+</div>
+
+<article class="panel glass-card mt-4 ticket-public-card">
+  <div class="route-banner">
+    <div>
+      <span class="route-code">{{ t.from_airport_code or t.from_city[:3]|upper }}</span>
+      <p>{{ t.from_city }}</p>
+    </div>
+    <div class="route-arrow">→</div>
+    <div class="text-end">
+      <span class="route-code">{{ t.to_airport_code or t.to_city[:3]|upper }}</span>
+      <p>{{ t.to_city }}</p>
+    </div>
+  </div>
+
+  <div class="detail-grid mt-4">
+    <div><strong>Reys #:</strong> {{ t.route_code or '-' }}</div>
+    <div><strong>Sana/Vaqt:</strong> {{ t.departure_date }} {{ t.departure_time or '' }}</div>
+    <div><strong>Klass:</strong> {{ t.travel_class or 'Economy' }}</div>
+    <div><strong>Aviakompaniya:</strong> {{ t.airline }}</div>
+    <div><strong>Yo'lovchilar soni:</strong> {{ t.passenger_count }}</div>
+    <div><strong>Tarkib:</strong> ADT {{ t.adult_count or 0 }} • CHD {{ t.child_count or 0 }} • INF {{ t.infant_count or 0 }}</div>
+    <div><strong>Bagaj:</strong> {% if t.baggage_option == 'premium' %}Premium{% else %}Standard{% endif %}</div>
+    <div><strong>To'lov:</strong>
+      {% if (t.currency or 'UZS') == 'USD' %}
+        {{ '%.2f'|format(t.amount_value or 0) }} USD
+      {% else %}
+        {{ '{:,.0f}'.format(t.amount_value or t.amount_uzs or 0) }} UZS
+      {% endif %}
+    </div>
+    <div><strong>Baza/Fee:</strong>
+      {% if (t.currency or 'UZS') == 'USD' %}
+        {{ '%.2f'|format(t.base_amount_value or t.amount_value or 0) }} + {{ '%.2f'|format(t.method_fee_value or 0) }} USD
+      {% else %}
+        {{ '{:,.0f}'.format(t.base_amount_value or t.base_amount_uzs or t.amount_uzs or 0) }} + {{ '{:,.0f}'.format(t.method_fee_value or t.method_fee_uzs or 0) }} UZS
+      {% endif %}
+      ({{ '%.2f'|format(t.method_fee_pct or 0) }}%)
+    </div>
+    <div><strong>To'lov turi:</strong> {{ t.payment_method|upper if t.payment_method else '-' }}</div>
+  </div>
+
+  <div class="email-note mt-4">
+    <strong>Yo'lovchi ro'yxati:</strong> {{ t.passenger_names or t.full_name }}
+  </div>
+</article>
+{% endblock %}
